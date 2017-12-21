@@ -53,5 +53,4 @@ func (t *PodTracker) Track(callback PodReceiver) {
 func (t *PodTracker) Stop() {
 	var e struct{}
 	t.stop <- e
-	close(t.stop)
 }
