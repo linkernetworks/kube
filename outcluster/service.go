@@ -1,6 +1,7 @@
 package outcluster
 
 import (
+	"errors"
 	"fmt"
 
 	"k8s.io/client-go/kubernetes"
@@ -13,6 +14,7 @@ import (
 
 	"bitbucket.org/linkernetworks/aurora/src/config"
 	"bitbucket.org/linkernetworks/aurora/src/logger"
+	k8ssvc "bitbucket.org/linkernetworks/aurora/src/service/kubernetes"
 )
 
 func DeleteNodePortServices(clientset *kubernetes.Clientset) error {
@@ -64,6 +66,19 @@ func AllocateMongoExternalService(clientset *kubernetes.Clientset, name string) 
 	s = NewMongoExternalService(name)
 	_, err = clientset.Core().Services("default").Create(s)
 	return err
+}
+
+func ConnectAndRewrite(cf config.Config) (config.Config, error) {
+	if cf.Kubernetes == nil {
+		return cf, errors.New("kubernetes config is not defined, can't convert config to load kubernetes service")
+	}
+
+	svc := k8ssvc.NewFromConfig(cf.Kubernetes)
+	clientset, err := svc.CreateClientset()
+	if err != nil {
+		return cf, err
+	}
+	return Connect(clientset, cf)
 }
 
 func Connect(clientset *kubernetes.Clientset, cf config.Config) (config.Config, error) {
