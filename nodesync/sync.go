@@ -5,8 +5,8 @@ import (
 	"bitbucket.org/linkernetworks/aurora/src/kubemon"
 	"bitbucket.org/linkernetworks/aurora/src/logger"
 	"bitbucket.org/linkernetworks/aurora/src/service/mongo"
+	"errors"
 	"gopkg.in/mgo.v2/bson"
-
 	core_v1 "k8s.io/api/core/v1"
 
 	"k8s.io/apimachinery/pkg/fields"
@@ -16,7 +16,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
-func nodeSync(context *mongo.Context, n *core_v1.Node) error {
+func nodeSync(context *mongo.Context, n *core_v1.Node, action string) error {
 	node := &entity.Node{
 		// ID:                bson.NewObjectId(),
 		Name:              n.GetName(),
@@ -48,38 +48,55 @@ func nodeSync(context *mongo.Context, n *core_v1.Node) error {
 	}
 	update := bson.M{"$set": node}
 	q := bson.M{"name": node.Name}
-	_, err := context.C(entity.NodeCollectionName).Upsert(q, update)
-	return err
+	if action == "UPDATE" {
+		_, err := context.C(entity.NodeCollectionName).Upsert(q, update)
+		return err
+	} else if action == "DELETE" {
+		err := context.C(entity.NodeCollectionName).Remove(q)
+		return err
+	} else {
+		return errors.New("Unknow action")
+	}
+	return nil
+
 }
 
 func track(clientset *kubernetes.Clientset, ms *mongo.MongoService) {
 	context := ms.NewContext()
 	defer context.Close()
+	var e struct{}
+	stop := make(chan struct{})
 	_, controller := kubemon.WatchNodes(clientset, fields.Everything(), cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			n := obj.(*core_v1.Node)
 			logger.Debug("============= ADD =============")
-			err := nodeSync(context, n)
+			err := nodeSync(context, n, "UPDATE")
 			if err != nil {
-				logger.Fatalln(err)
+				logger.Error(err)
+				stop <- e
 			}
 			logger.Debug("============= END ADD =============")
 		},
 		DeleteFunc: func(obj interface{}) {
+			n := obj.(*core_v1.Node)
 			logger.Debug("============= DELETE =============")
-			// FIXME should delete a node from node collection
+			err := nodeSync(context, n, "DELETE")
+			if err != nil {
+				logger.Error(err)
+				stop <- e
+			}
 			logger.Debug("============= END DELETE =============")
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			n := newObj.(*core_v1.Node)
-			err := nodeSync(context, n)
+			err := nodeSync(context, n, "UPDATE")
 			if err != nil {
-				logger.Fatalln(err)
+				logger.Error(err)
+				stop <- e
 			}
 			logger.Debug("============= END UPDATE =============")
 		},
 	})
-	stop := make(chan struct{})
 	go controller.Run(stop)
 	<-stop
 }
