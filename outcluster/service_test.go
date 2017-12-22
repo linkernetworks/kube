@@ -10,7 +10,7 @@ import (
 	"bitbucket.org/linkernetworks/aurora/src/service/kubernetes"
 )
 
-func TestDiscoverVisibleNodes(t *testing.T) {
+func TestAllocateNodePortServices(t *testing.T) {
 	if _, defined := os.LookupEnv("TEST_K8S"); !defined {
 		t.Skip()
 		return
@@ -21,9 +21,8 @@ func TestDiscoverVisibleNodes(t *testing.T) {
 	clientset, err := ksvc.CreateClientset()
 	assert.NoError(t, err)
 
-	node, addr, err := DiscoverVisibleNode(clientset)
-	assert.NoError(t, err)
+	DeleteNodePortServices(clientset)
 
-	assert.True(t, addr != "")
-	assert.NotNil(t, node)
+	err = AllocateNodePortServices(clientset, cf)
+	assert.NoError(t, err)
 }
