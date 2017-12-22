@@ -16,9 +16,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
-func nodeSync(n *core_v1.Node, ms *mongo.MongoService) error {
-	context := ms.NewContext()
-	defer context.Close()
+func nodeSync(context *mongo.Context, n *core_v1.Node) error {
 	node := &entity.Node{
 		// ID:                bson.NewObjectId(),
 		Name:              n.GetName(),
@@ -55,28 +53,26 @@ func nodeSync(n *core_v1.Node, ms *mongo.MongoService) error {
 }
 
 func track(clientset *kubernetes.Clientset, ms *mongo.MongoService) {
+	context := ms.NewContext()
+	defer context.Close()
 	_, controller := kubemon.WatchNodes(clientset, fields.Everything(), cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			n := obj.(*core_v1.Node)
 			logger.Debug("============= ADD =============")
-			err := nodeSync(n, ms)
+			err := nodeSync(context, n)
 			if err != nil {
 				logger.Fatalln(err)
 			}
 			logger.Debug("============= END ADD =============")
 		},
 		DeleteFunc: func(obj interface{}) {
-			n := obj.(*core_v1.Node)
 			logger.Debug("============= DELETE =============")
-			err := nodeSync(n, ms)
-			if err != nil {
-				logger.Fatalln(err)
-			}
+			// FIXME should delete a node from node collection
 			logger.Debug("============= END DELETE =============")
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			n := newObj.(*core_v1.Node)
-			err := nodeSync(n, ms)
+			err := nodeSync(context, n)
 			if err != nil {
 				logger.Fatalln(err)
 			}
