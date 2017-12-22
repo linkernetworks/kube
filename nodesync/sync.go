@@ -18,7 +18,6 @@ import (
 
 func nodeSync(context *mongo.Context, n *core_v1.Node, action string) error {
 	node := &entity.Node{
-		// ID:                bson.NewObjectId(),
 		Name:              n.GetName(),
 		ClusterName:       n.GetClusterName(),
 		CreationTimestamp: n.GetCreationTimestamp().Time,
@@ -48,16 +47,18 @@ func nodeSync(context *mongo.Context, n *core_v1.Node, action string) error {
 	}
 	update := bson.M{"$set": node}
 	q := bson.M{"name": node.Name}
-	if action == "UPDATE" {
+
+	switch action {
+	case "UPDATE":
 		_, err := context.C(entity.NodeCollectionName).Upsert(q, update)
 		return err
-	} else if action == "DELETE" {
+	case "DELETE":
 		err := context.C(entity.NodeCollectionName).Remove(q)
 		return err
-	} else {
-		return errors.New("Unknow action")
+	default:
+		return errors.New("Unknown action")
+
 	}
-	return nil
 
 }
 
