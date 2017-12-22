@@ -1,6 +1,8 @@
 package outcluster
 
 import (
+	"fmt"
+
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
@@ -64,8 +66,44 @@ func AllocateMongoExternalService(clientset *kubernetes.Clientset, name string) 
 	return err
 }
 
-func RewriteConfig(cf config.Config) {
+func Connect(clientset *kubernetes.Clientset, cf config.Config) (config.Config, error) {
+	var dst = cf
+	var err error
 
+	node, address, err := DiscoverVisibleNode(clientset)
+	if err != nil {
+		return dst, err
+	}
+	_ = node
+
+	if err := AllocateNodePortServices(clientset, cf); err != nil {
+		return dst, err
+	}
+
+	mongo, err := clientset.Core().Services("default").Get("mongo-external", metav1.GetOptions{})
+	if err != nil {
+		return dst, err
+	}
+	for _, port := range mongo.Spec.Ports {
+		if port.Name == "mongo" {
+			dst.Mongo.Url = fmt.Sprintf("mongodb://%s:%d/aurora", address, port.NodePort)
+			logger.Infof("Rewrited mongodb url to %s", dst.Mongo.Url)
+		}
+	}
+
+	redis, err := clientset.Core().Services("default").Get("redis-external", metav1.GetOptions{})
+	if err != nil {
+		return dst, err
+	}
+	for _, port := range redis.Spec.Ports {
+		if port.Name == "redis" {
+			dst.Redis.Host = address
+			dst.Redis.Port = port.NodePort
+			logger.Infof("Rewrited redis address to %s", dst.Redis.Addr())
+		}
+	}
+
+	return dst, nil
 }
 
 func NewRedisExternalService(name string) *v1.Service {
@@ -75,7 +113,7 @@ func NewRedisExternalService(name string) *v1.Service {
 			// TODO: use role for consistency
 			"name": "redis",
 		},
-		PortName:   "mongo",
+		PortName:   "redis",
 		TargetPort: 6379,
 		NodePort:   32199,
 	})
