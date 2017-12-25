@@ -145,7 +145,7 @@ func NewInfluxdbExternalService(name string) *v1.Service {
 		},
 		PortName:   "influxdb",
 		TargetPort: 8086,
-		NodePort:   38086,
+		NodePort:   32086,
 	})
 }
 
