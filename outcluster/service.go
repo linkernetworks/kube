@@ -1,9 +1,10 @@
 package outcluster
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
+
+	"k8s.io/apimachinery/pkg/api/errors"
 
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -42,52 +43,50 @@ func AllocateNodePortServices(clientset *kubernetes.Clientset, cf config.Config)
 
 func AllocateRedisExternalService(clientset *kubernetes.Clientset, name string) error {
 	logger.Infof("Checking %s service...", name)
-	s, err := clientset.Core().Services("default").Get(name, metav1.GetOptions{})
-	if err == nil {
-		return nil
-	}
+	_, err := clientset.Core().Services("default").Get(name, metav1.GetOptions{})
 
 	logger.Infof("Creating service: %s", name)
-	s = NewRedisExternalService(name)
-	_, err = clientset.Core().Services("default").Create(s)
+	if errors.IsNotFound(err) {
+		s := NewRedisExternalService(name)
+		_, err = clientset.Core().Services("default").Create(s)
+		return err
+	}
 	return err
 }
 
 func AllocateInfluxdbExternalService(clientset *kubernetes.Clientset, name string) error {
 	logger.Infof("Checking %s service...", name)
-	s, err := clientset.Core().Services("default").Get(name, metav1.GetOptions{})
-	if err == nil {
-		return nil
+	_, err := clientset.Core().Services("default").Get(name, metav1.GetOptions{})
+	if errors.IsNotFound(err) {
+		logger.Infof("Creating service: %s", name)
+		s := NewInfluxdbExternalService(name)
+		_, err = clientset.Core().Services("default").Create(s)
+		return err
 	}
-
-	logger.Infof("Creating service: %s", name)
-	s = NewInfluxdbExternalService(name)
-	_, err = clientset.Core().Services("default").Create(s)
 	return err
 }
 
 func AllocateMongoExternalService(clientset *kubernetes.Clientset, name string) error {
 	logger.Infof("Labeling podindex on mongo-0 pod for %s", name)
-	_, err := clientset.Core().Pods("default").Patch("mongo-0", types.JSONPatchType, []byte(`[ { "op": "add", "path": "/metadata/labels/podindex", "value": "0" } ]`))
-	if err != nil {
+	if _, err := clientset.Core().Pods("default").Patch("mongo-0", types.JSONPatchType, []byte(`[ { "op": "add", "path": "/metadata/labels/podindex", "value": "0" } ]`)); err != nil {
 		return err
 	}
 
 	logger.Infof("Checking %s service...", name)
-	s, err := clientset.Core().Services("default").Get(name, metav1.GetOptions{})
-	if err == nil {
-		return nil
+	_, err := clientset.Core().Services("default").Get(name, metav1.GetOptions{})
+	if errors.IsNotFound(err) {
+		logger.Infof("Creating service: %s", name)
+		s := NewMongoExternalService(name)
+		_, err = clientset.Core().Services("default").Create(s)
+		return err
 	}
-
-	logger.Infof("Creating service: %s", name)
-	s = NewMongoExternalService(name)
-	_, err = clientset.Core().Services("default").Create(s)
 	return err
+
 }
 
 func ConnectAndRewrite(cf config.Config) (config.Config, error) {
 	if cf.Kubernetes == nil {
-		return cf, errors.New("kubernetes config is not defined, can't convert config to load kubernetes service")
+		return cf, fmt.Errorf("kubernetes config is not defined, can't convert config to load kubernetes service")
 	}
 
 	svc := k8ssvc.NewFromConfig(cf.Kubernetes)
