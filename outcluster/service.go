@@ -33,6 +33,9 @@ func AllocateNodePortServices(clientset *kubernetes.Clientset, cf config.Config)
 	if err := AllocateRedisExternalService(clientset, "redis-external"); err != nil {
 		return err
 	}
+	if err := AllocateInfluxdbExternalService(clientset, "influxdb-external"); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -45,6 +48,19 @@ func AllocateRedisExternalService(clientset *kubernetes.Clientset, name string) 
 
 	logger.Infof("Creating service: %s", name)
 	s = NewRedisExternalService(name)
+	_, err = clientset.Core().Services("default").Create(s)
+	return err
+}
+
+func AllocateInfluxdbExternalService(clientset *kubernetes.Clientset, name string) error {
+	logger.Infof("Checking %s service...", name)
+	s, err := clientset.Core().Services("default").Get(name, metav1.GetOptions{})
+	if err == nil {
+		return nil
+	}
+
+	logger.Infof("Creating service: %s", name)
+	s = NewInfluxdbExternalService(name)
 	_, err = clientset.Core().Services("default").Create(s)
 	return err
 }
@@ -119,6 +135,18 @@ func Connect(clientset *kubernetes.Clientset, cf config.Config) (config.Config, 
 	}
 
 	return dst, nil
+}
+
+func NewInfluxdbExternalService(name string) *v1.Service {
+	return NewNodePortService(name, NodePortServiceParams{
+		Labels: map[string]string{"environment": "testing"},
+		Selector: map[string]string{
+			"service": "influxdb",
+		},
+		PortName:   "influxdb",
+		TargetPort: 8086,
+		NodePort:   38086,
+	})
 }
 
 func NewRedisExternalService(name string) *v1.Service {
