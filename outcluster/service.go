@@ -3,6 +3,7 @@ package outcluster
 import (
 	"errors"
 	"fmt"
+	"strconv"
 
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -130,6 +131,17 @@ func Connect(clientset *kubernetes.Clientset, cf config.Config) (config.Config, 
 		if port.Name == "redis" {
 			dst.Redis.Host = address
 			dst.Redis.Port = port.NodePort
+			logger.Infof("Rewrited redis address to %s", dst.Redis.Addr())
+		}
+	}
+
+	influxdb, err := clientset.Core().Services("default").Get("influxdb-external", metav1.GetOptions{})
+	if err != nil {
+		return dst, err
+	}
+	for _, port := range influxdb.Spec.Ports {
+		if port.Name == "influxdb" {
+			dst.Influxdb.Url = "http://" + address + ":" + strconv.Itoa(int(port.NodePort))
 			logger.Infof("Rewrited redis address to %s", dst.Redis.Addr())
 		}
 	}
