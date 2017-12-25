@@ -105,6 +105,7 @@ func Connect(clientset *kubernetes.Clientset, cf config.Config) (config.Config, 
 	if err != nil {
 		return dst, err
 	}
+	logger.Infof("Found node %s", address)
 	_ = node
 
 	if err := AllocateNodePortServices(clientset, cf); err != nil {
@@ -116,10 +117,9 @@ func Connect(clientset *kubernetes.Clientset, cf config.Config) (config.Config, 
 		return dst, err
 	}
 	for _, port := range mongo.Spec.Ports {
-		if port.Name == "mongo" {
-			dst.Mongo.Url = fmt.Sprintf("mongodb://%s:%d/aurora", address, port.NodePort)
-			logger.Infof("Rewrited mongodb url to %s", dst.Mongo.Url)
-		}
+		dst.Mongo.Url = fmt.Sprintf("mongodb://%s:%d/aurora", address, port.NodePort)
+		logger.Infof("Rewrited mongodb url to %s", dst.Mongo.Url)
+		break
 	}
 
 	redis, err := clientset.Core().Services("default").Get("redis-external", metav1.GetOptions{})
@@ -127,11 +127,10 @@ func Connect(clientset *kubernetes.Clientset, cf config.Config) (config.Config, 
 		return dst, err
 	}
 	for _, port := range redis.Spec.Ports {
-		if port.Name == "redis" {
-			dst.Redis.Host = address
-			dst.Redis.Port = port.NodePort
-			logger.Infof("Rewrited redis address to %s", dst.Redis.Addr())
-		}
+		dst.Redis.Host = address
+		dst.Redis.Port = port.NodePort
+		logger.Infof("Rewrited redis address to %s", dst.Redis.Addr())
+		break
 	}
 
 	influxdb, err := clientset.Core().Services("default").Get("influxdb-external", metav1.GetOptions{})
@@ -139,10 +138,9 @@ func Connect(clientset *kubernetes.Clientset, cf config.Config) (config.Config, 
 		return dst, err
 	}
 	for _, port := range influxdb.Spec.Ports {
-		if port.Name == "influxdb" {
-			dst.Influxdb.Url = "http://" + address + ":" + strconv.Itoa(int(port.NodePort))
-			logger.Infof("Rewrited redis address to %s", dst.Redis.Addr())
-		}
+		dst.Influxdb.Url = "http://" + address + ":" + strconv.Itoa(int(port.NodePort))
+		logger.Infof("Rewrited influxdb address to %s", dst.Influxdb.Url)
+		break
 	}
 
 	return dst, nil
