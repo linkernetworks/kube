@@ -7,35 +7,84 @@ import (
 	"bitbucket.org/linkernetworks/aurora/src/service/mongo"
 	"errors"
 	"gopkg.in/mgo.v2/bson"
-	core_v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
-	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
+	// Uncomment the following line to load the gcp plugin (only required to authenticate againtst GKE clusters).
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
-func nodeSync(context *mongo.Context, n *core_v1.Node, action string) error {
+type NodeTrackService struct {
+	clientset *kubernetes.Clientset
+	mongo     *mongo.MongoService
+	context   *mongo.Context
+	stop      chan struct{}
+}
+
+func New(clientset *kubernetes.Clientset, mongo *mongo.MongoService) *NodeTrackService {
+	stop := make(chan struct{})
+	return &NodeTrackService{clientset, mongo, mongo.NewContext(), stop}
+}
+
+func (nts *NodeTrackService) Sync() {
+	_, controller := kubemon.WatchNodes(nts.clientset, fields.Everything(), cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			n := obj.(*corev1.Node)
+			err := syncDatabase(nts.context, n, "UPDATE")
+			if err != nil {
+				logger.Error(err)
+			}
+		},
+		DeleteFunc: func(obj interface{}) {
+			n := obj.(*corev1.Node)
+			err := syncDatabase(nts.context, n, "DELETE")
+			if err != nil {
+				logger.Error(err)
+			}
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			n := newObj.(*corev1.Node)
+			err := syncDatabase(nts.context, n, "UPDATE")
+			if err != nil {
+				logger.Error(err)
+			}
+		},
+	})
+	go controller.Run(nts.stop)
+}
+
+func (nts *NodeTrackService) Wait() {
+	<-nts.stop
+}
+
+func (nts *NodeTrackService) Stop() {
+	defer nts.context.Close()
+	var e struct{}
+	nts.stop <- e
+}
+
+func syncDatabase(context *mongo.Context, no *corev1.Node, action string) error {
 	node := &entity.Node{
-		Name:              n.GetName(),
-		ClusterName:       n.GetClusterName(),
-		CreationTimestamp: n.GetCreationTimestamp().Time,
-		Labels:            n.GetLabels(),
+		Name:              no.GetName(),
+		ClusterName:       no.GetClusterName(),
+		CreationTimestamp: no.GetCreationTimestamp().Time,
+		Labels:            no.GetLabels(),
 		Allocatable: entity.Allocatable{
-			CPU:       n.Status.Allocatable.Cpu().String(),
-			Memory:    n.Status.Allocatable.Memory().String(),
-			POD:       n.Status.Allocatable.Pods().String(),
-			NvidiaGPU: n.Status.Allocatable.NvidiaGPU().String(),
+			CPU:       no.Status.Allocatable.Cpu().String(),
+			Memory:    no.Status.Allocatable.Memory().String(),
+			POD:       no.Status.Allocatable.Pods().String(),
+			NvidiaGPU: no.Status.Allocatable.NvidiaGPU().String(),
 		},
 		Capacity: entity.Capacity{
-			CPU:       n.Status.Capacity.Cpu().String(),
-			Memory:    n.Status.Capacity.Memory().String(),
-			POD:       n.Status.Capacity.Pods().String(),
-			NvidiaGPU: n.Status.Capacity.NvidiaGPU().String(),
+			CPU:       no.Status.Capacity.Cpu().String(),
+			Memory:    no.Status.Capacity.Memory().String(),
+			POD:       no.Status.Capacity.Pods().String(),
+			NvidiaGPU: no.Status.Capacity.NvidiaGPU().String(),
 		},
 	}
-	for _, addr := range n.Status.Addresses {
+	for _, addr := range no.Status.Addresses {
 		switch addr.Type {
 		case "InternalIP":
 			node.InternalIP = addr.Address
@@ -57,47 +106,5 @@ func nodeSync(context *mongo.Context, n *core_v1.Node, action string) error {
 		return err
 	default:
 		return errors.New("Unknown action")
-
 	}
-
-}
-
-func track(clientset *kubernetes.Clientset, ms *mongo.MongoService) {
-	context := ms.NewContext()
-	defer context.Close()
-	var e struct{}
-	stop := make(chan struct{})
-	_, controller := kubemon.WatchNodes(clientset, fields.Everything(), cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
-			n := obj.(*core_v1.Node)
-			logger.Debug("============= ADD =============")
-			err := nodeSync(context, n, "UPDATE")
-			if err != nil {
-				logger.Error(err)
-				stop <- e
-			}
-			logger.Debug("============= END ADD =============")
-		},
-		DeleteFunc: func(obj interface{}) {
-			n := obj.(*core_v1.Node)
-			logger.Debug("============= DELETE =============")
-			err := nodeSync(context, n, "DELETE")
-			if err != nil {
-				logger.Error(err)
-				stop <- e
-			}
-			logger.Debug("============= END DELETE =============")
-		},
-		UpdateFunc: func(oldObj, newObj interface{}) {
-			n := newObj.(*core_v1.Node)
-			err := nodeSync(context, n, "UPDATE")
-			if err != nil {
-				logger.Error(err)
-				stop <- e
-			}
-			logger.Debug("============= END UPDATE =============")
-		},
-	})
-	go controller.Run(stop)
-	<-stop
 }
