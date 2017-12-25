@@ -165,7 +165,7 @@ func NewRedisExternalService(name string) *v1.Service {
 		Labels: map[string]string{"environment": "testing"},
 		Selector: map[string]string{
 			// TODO: use role for consistency
-			"name": "redis",
+			"service": "redis",
 		},
 		PortName:   "redis",
 		TargetPort: 6379,
