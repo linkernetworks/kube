@@ -34,7 +34,7 @@ func TestNodeSync(t *testing.T) {
 	assert.NoError(t, err)
 
 	var nodeResults []*entity.Node
-	ms := mongo.NewMongoService(cf.Mongo.Url)
+	ms := mongo.NewMongoService(cf.Mongo.GetPublic())
 	nts := New(clientset, ms)
 	signal := nts.Sync()
 
