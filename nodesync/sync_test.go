@@ -32,23 +32,20 @@ func TestNodeSync(t *testing.T) {
 	assert.NoError(t, err)
 
 	var nodeResults []*entity.Node
-	mongoService := mongo.NewMongoService(cf.Mongo.Url)
-
-	nts := New(clientset, mongoService)
-
+	ms := mongo.NewMongoService(cf.Mongo.Url)
+	nts := New(clientset, ms)
 	nts.Sync()
 
+	// this context is for finding any data in node collection
+	context := ms.NewContext()
 Watch:
 	for {
-		context := mongoService.NewContext()
 		err = context.C(entity.NodeCollectionName).Find(nil).All(&nodeResults)
 		assert.NoError(t, err)
 		if len(nodeResults) != 0 {
 			break Watch
 		}
-
 	}
-
 	nts.Stop()
 	assert.NotEqual(t, len(nodeResults), 0, "mongodb node collection is empty")
 }

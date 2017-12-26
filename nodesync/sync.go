@@ -5,7 +5,6 @@ import (
 	"bitbucket.org/linkernetworks/aurora/src/kubemon"
 	"bitbucket.org/linkernetworks/aurora/src/logger"
 	"bitbucket.org/linkernetworks/aurora/src/service/mongo"
-	"errors"
 	"gopkg.in/mgo.v2/bson"
 	corev1 "k8s.io/api/core/v1"
 
@@ -17,42 +16,53 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
-type NodeTrackService struct {
+type NodeStats struct {
+	Added   int
+	Updated int
+	Deleted int
+}
+
+type NodeSync struct {
 	clientset *kubernetes.Clientset
-	mongo     *mongo.MongoService
 	context   *mongo.Context
 	stop      chan struct{}
+	stats     NodeStats
 }
 
-func New(clientset *kubernetes.Clientset, mongo *mongo.MongoService) *NodeTrackService {
+func New(clientset *kubernetes.Clientset, m *mongo.MongoService) *NodeSync {
 	stop := make(chan struct{})
-	return &NodeTrackService{
-		clientset,
-		mongo,
-		mongo.NewContext(),
-		stop,
-	}
+	var stats NodeStats
+	return &NodeSync{clientset, m.NewContext(), stop, stats}
 }
 
-func (nts *NodeTrackService) Sync() {
+func (nts *NodeSync) Sync() {
 	_, controller := kubemon.WatchNodes(nts.clientset, fields.Everything(), cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			n := obj.(*corev1.Node)
-			err := syncDatabase(nts.context, n, "UPDATE")
+			nts.stats.Added++
+
+			node := CreateNodeEntity(n)
+			err := nts.UpsertNode(&node)
 			if err != nil {
 				logger.Error(err)
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
 			n := obj.(*corev1.Node)
-			err := syncDatabase(nts.context, n, "DELETE")
+			nts.stats.Updated++
+
+			node := CreateNodeEntity(n)
+			err := nts.RemoveNode(&node)
 			if err != nil {
 				logger.Error(err)
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			n := newObj.(*corev1.Node)
-			err := syncDatabase(nts.context, n, "UPDATE")
+			nts.stats.Deleted++
+
+			node := CreateNodeEntity(n)
+			err := nts.UpsertNode(&node)
 			if err != nil {
 				logger.Error(err)
 			}
@@ -61,18 +71,18 @@ func (nts *NodeTrackService) Sync() {
 	go controller.Run(nts.stop)
 }
 
-func (nts *NodeTrackService) Wait() {
+func (nts *NodeSync) Wait() {
 	<-nts.stop
 }
 
-func (nts *NodeTrackService) Stop() {
+func (nts *NodeSync) Stop() {
 	defer nts.context.Close()
 	var e struct{}
 	nts.stop <- e
 }
 
-func syncDatabase(context *mongo.Context, no *corev1.Node, action string) error {
-	node := &entity.Node{
+func CreateNodeEntity(no *corev1.Node) entity.Node {
+	node := entity.Node{
 		Name:              no.GetName(),
 		ClusterName:       no.GetClusterName(),
 		CreationTimestamp: no.GetCreationTimestamp().Time,
@@ -100,17 +110,17 @@ func syncDatabase(context *mongo.Context, no *corev1.Node, action string) error 
 			node.Hostname = addr.Address
 		}
 	}
+	return node
+}
+
+func (nts *NodeSync) UpsertNode(node *entity.Node) error {
 	update := bson.M{"$set": node}
 	q := bson.M{"name": node.Name}
+	_, err := nts.context.C(entity.NodeCollectionName).Upsert(q, update)
+	return err
+}
 
-	switch action {
-	case "UPDATE":
-		_, err := context.C(entity.NodeCollectionName).Upsert(q, update)
-		return err
-	case "DELETE":
-		err := context.C(entity.NodeCollectionName).Remove(q)
-		return err
-	default:
-		return errors.New("Unknown action")
-	}
+func (nts *NodeSync) RemoveNode(node *entity.Node) error {
+	q := bson.M{"name": node.Name}
+	return nts.context.C(entity.NodeCollectionName).Remove(q)
 }
