@@ -12,7 +12,8 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
-	// Uncomment the following line to load the gcp plugin (only required to authenticate againtst GKE clusters).
+
+	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
@@ -25,7 +26,12 @@ type NodeTrackService struct {
 
 func New(clientset *kubernetes.Clientset, mongo *mongo.MongoService) *NodeTrackService {
 	stop := make(chan struct{})
-	return &NodeTrackService{clientset, mongo, mongo.NewContext(), stop}
+	return &NodeTrackService{
+		clientset,
+		mongo,
+		mongo.NewContext(),
+		stop,
+	}
 }
 
 func (nts *NodeTrackService) Sync() {
