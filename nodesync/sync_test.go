@@ -10,6 +10,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"os"
 	"testing"
+
+	"fmt"
 )
 
 const (
@@ -34,18 +36,25 @@ func TestNodeSync(t *testing.T) {
 	var nodeResults []*entity.Node
 	ms := mongo.NewMongoService(cf.Mongo.Url)
 	nts := New(clientset, ms)
-	nts.Sync()
+	signal := nts.Sync()
 
 	// this context is for finding any data in node collection
 	context := ms.NewContext()
+
+	fmt.Println("checking result")
 Watch:
 	for {
-		err = context.C(entity.NodeCollectionName).Find(nil).All(&nodeResults)
-		assert.NoError(t, err)
-		if len(nodeResults) != 0 {
-			break Watch
+		select {
+		case <-signal:
+			err = context.C(entity.NodeCollectionName).Find(nil).All(&nodeResults)
+			assert.NoError(t, err)
+			if len(nodeResults) != 0 {
+				break Watch
+			}
 		}
 	}
+
+	fmt.Println("stopping")
 	nts.Stop()
 	assert.NotEqual(t, len(nodeResults), 0, "mongodb node collection is empty")
 }

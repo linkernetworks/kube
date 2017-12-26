@@ -35,7 +35,11 @@ func New(clientset *kubernetes.Clientset, m *mongo.MongoService) *NodeSync {
 	return &NodeSync{clientset, m.NewContext(), stop, stats}
 }
 
-func (nts *NodeSync) Sync() {
+type Signal chan bool
+
+func (nts *NodeSync) Sync() Signal {
+	signal := make(Signal, 1)
+
 	_, controller := kubemon.WatchNodes(nts.clientset, fields.Everything(), cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			n := obj.(*corev1.Node)
@@ -45,6 +49,10 @@ func (nts *NodeSync) Sync() {
 			err := nts.UpsertNode(&node)
 			if err != nil {
 				logger.Error(err)
+			}
+
+			select {
+			case signal <- true:
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
@@ -56,6 +64,10 @@ func (nts *NodeSync) Sync() {
 			if err != nil {
 				logger.Error(err)
 			}
+
+			select {
+			case signal <- true:
+			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			n := newObj.(*corev1.Node)
@@ -66,9 +78,15 @@ func (nts *NodeSync) Sync() {
 			if err != nil {
 				logger.Error(err)
 			}
+
+			select {
+			case signal <- true:
+			}
 		},
 	})
 	go controller.Run(nts.stop)
+
+	return signal
 }
 
 func (nts *NodeSync) Wait() {
