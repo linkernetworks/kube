@@ -78,16 +78,16 @@ func syncDatabase(context *mongo.Context, no *corev1.Node, action string) error 
 		CreationTimestamp: no.GetCreationTimestamp().Time,
 		Labels:            no.GetLabels(),
 		Allocatable: entity.Allocatable{
-			CPU:       no.Status.Allocatable.Cpu().String(),
-			Memory:    no.Status.Allocatable.Memory().String(),
-			POD:       no.Status.Allocatable.Pods().String(),
-			NvidiaGPU: no.Status.Allocatable.NvidiaGPU().String(),
+			CPU:       no.Status.Allocatable.Cpu().MilliValue(),
+			Memory:    no.Status.Allocatable.Memory().MilliValue(),
+			POD:       no.Status.Allocatable.Pods().Value(),
+			NvidiaGPU: no.Status.Allocatable.NvidiaGPU().MilliValue(),
 		},
 		Capacity: entity.Capacity{
-			CPU:       no.Status.Capacity.Cpu().String(),
-			Memory:    no.Status.Capacity.Memory().String(),
-			POD:       no.Status.Capacity.Pods().String(),
-			NvidiaGPU: no.Status.Capacity.NvidiaGPU().String(),
+			CPU:       no.Status.Capacity.Cpu().MilliValue(),
+			Memory:    no.Status.Capacity.Memory().MilliValue(),
+			POD:       no.Status.Capacity.Pods().Value(),
+			NvidiaGPU: no.Status.Capacity.NvidiaGPU().MilliValue(),
 		},
 	}
 	for _, addr := range no.Status.Addresses {
