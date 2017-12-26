@@ -3,11 +3,10 @@ package nodesync
 import (
 	"bitbucket.org/linkernetworks/aurora/src/config"
 	"bitbucket.org/linkernetworks/aurora/src/entity"
-	"bitbucket.org/linkernetworks/aurora/src/kubeconfig"
-	// "bitbucket.org/linkernetworks/aurora/src/logger"
+	"bitbucket.org/linkernetworks/aurora/src/kubernetes/outcluster"
+	"bitbucket.org/linkernetworks/aurora/src/service/kubernetes"
 	"bitbucket.org/linkernetworks/aurora/src/service/mongo"
 	"github.com/stretchr/testify/assert"
-	"k8s.io/client-go/kubernetes"
 	"os"
 	"testing"
 
@@ -26,17 +25,20 @@ func TestNodeSync(t *testing.T) {
 
 	cf := config.Read(testingConfigPath)
 
-	config, err := kubeconfig.Load("", "")
+	ksvc := kubernetes.NewFromConfig(cf.Kubernetes)
+	clientset, err := ksvc.CreateClientset()
 	assert.NoError(t, err)
 
-	// create the clientset
-	clientset, err := kubernetes.NewForConfig(config)
+	newcf, err := outcluster.Connect(clientset, cf)
 	assert.NoError(t, err)
 
 	var nodeResults []*entity.Node
-	ms := mongo.NewMongoService(cf.Mongo.Url)
+	ms := mongo.NewMongoService(newcf.Mongo.Url)
+	assert.NotNil(t, ms)
 	fmt.Println(cf.Mongo.Url)
+
 	nts := New(clientset, ms)
+	assert.NotNil(t, nts)
 	signal := nts.Sync()
 
 	// this context is for finding any data in node collection
