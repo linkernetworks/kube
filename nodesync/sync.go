@@ -46,6 +46,7 @@ func (nts *NodeSync) Sync() Signal {
 			nts.stats.Added++
 
 			node := CreateNodeEntity(n)
+			logger.Info("Nodes state added")
 			err := nts.UpsertNode(&node)
 			if err != nil {
 				logger.Error(err)
@@ -60,6 +61,7 @@ func (nts *NodeSync) Sync() Signal {
 			nts.stats.Updated++
 
 			node := CreateNodeEntity(n)
+			logger.Info("Nodes state deleted")
 			err := nts.RemoveNode(&node)
 			if err != nil {
 				logger.Error(err)
@@ -74,6 +76,7 @@ func (nts *NodeSync) Sync() Signal {
 			nts.stats.Deleted++
 
 			node := CreateNodeEntity(n)
+			logger.Info("Nodes state updated")
 			err := nts.UpsertNode(&node)
 			if err != nil {
 				logger.Error(err)
