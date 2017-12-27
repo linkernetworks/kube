@@ -9,8 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
-
-	"fmt"
 )
 
 const (
@@ -35,7 +33,6 @@ func TestNodeSync(t *testing.T) {
 	var nodeResults []*entity.Node
 	ms := mongo.NewMongoService(newcf.Mongo.Url)
 	assert.NotNil(t, ms)
-	fmt.Println(cf.Mongo.Url)
 
 	nts := New(clientset, ms)
 	assert.NotNil(t, nts)
@@ -44,7 +41,6 @@ func TestNodeSync(t *testing.T) {
 	// this context is for finding any data in node collection
 	context := ms.NewContext()
 
-	fmt.Println("checking result")
 Watch:
 	for {
 		select {
@@ -57,7 +53,6 @@ Watch:
 		}
 	}
 
-	fmt.Println("stopping")
 	nts.Stop()
 	assert.NotEqual(t, len(nodeResults), 0, "mongodb node collection is empty")
 }
