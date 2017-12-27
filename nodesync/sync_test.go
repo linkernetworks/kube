@@ -3,7 +3,6 @@ package nodesync
 import (
 	"bitbucket.org/linkernetworks/aurora/src/config"
 	"bitbucket.org/linkernetworks/aurora/src/entity"
-	"bitbucket.org/linkernetworks/aurora/src/kubernetes/outcluster"
 	"bitbucket.org/linkernetworks/aurora/src/service/kubernetes"
 	"bitbucket.org/linkernetworks/aurora/src/service/mongo"
 	"github.com/stretchr/testify/assert"
@@ -27,11 +26,8 @@ func TestNodeSync(t *testing.T) {
 	clientset, err := ksvc.CreateClientset()
 	assert.NoError(t, err)
 
-	newcf, err := outcluster.Connect(clientset, cf)
-	assert.NoError(t, err)
-
 	var nodeResults []*entity.Node
-	ms := mongo.NewMongoService(newcf.Mongo.Url)
+	ms := mongo.NewMongoService(cf.Mongo.Url)
 	assert.NotNil(t, ms)
 
 	nts := New(clientset, ms)
