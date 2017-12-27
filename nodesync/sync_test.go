@@ -34,21 +34,12 @@ func TestNodeSync(t *testing.T) {
 	assert.NotNil(t, nts)
 	signal := nts.Sync()
 
-	// this context is for finding any data in node collection
-	// context := ms.NewContext()
-
 Watch:
 	for {
 		select {
 		case <-signal:
 			if (nts.stats.Added) != 0 {
-				print(nts.stats.Added)
 				break Watch
-			}
-			// err = context.C(entity.NodeCollectionName).Find(nil).All(&nodeResults)
-			// assert.NoError(t, err)
-			// if len(nodeResults) != 0 {
-			// 	break Watch
 			}
 		}
 	}
