@@ -25,6 +25,9 @@ func DeleteNodePortServices(clientset *kubernetes.Clientset) error {
 
 	logger.Info("Deleting redis-external service")
 	clientset.Core().Services("default").Delete("redis-external", nil)
+
+	logger.Info("Deleting redis-external service")
+	clientset.Core().Services("default").Delete("influxdb-external", nil)
 	return nil
 }
 
@@ -94,10 +97,10 @@ func ConnectAndRewrite(cf config.Config) (config.Config, error) {
 	if err != nil {
 		return cf, err
 	}
-	return Connect(clientset, cf)
+	return ConnectWith(clientset, cf)
 }
 
-func Connect(clientset *kubernetes.Clientset, cf config.Config) (config.Config, error) {
+func Rewrite(clientset *kubernetes.Clientset, cf config.Config) (config.Config, error) {
 	var dst = cf
 	var err error
 
@@ -107,10 +110,6 @@ func Connect(clientset *kubernetes.Clientset, cf config.Config) (config.Config, 
 	}
 	logger.Infof("Found node %s", address)
 	_ = node
-
-	if err := AllocateNodePortServices(clientset, cf); err != nil {
-		return dst, err
-	}
 
 	mongo, err := clientset.Core().Services("default").Get("mongo-external", metav1.GetOptions{})
 	if err != nil {
@@ -142,8 +141,18 @@ func Connect(clientset *kubernetes.Clientset, cf config.Config) (config.Config, 
 		logger.Infof("Rewrited influxdb address to %s", dst.Influxdb.Url)
 		break
 	}
-
 	return dst, nil
+}
+
+// ConnectWith creates the external services and rewrite the config
+func ConnectWith(clientset *kubernetes.Clientset, cf config.Config) (config.Config, error) {
+	var dst = cf
+
+	if err := AllocateNodePortServices(clientset, cf); err != nil {
+		return dst, err
+	}
+
+	return Rewrite(clientset, dst)
 }
 
 func NewInfluxdbExternalService(name string) *v1.Service {
@@ -176,7 +185,7 @@ func NewMongoExternalService(name string) *v1.Service {
 	return NewNodePortService(name, NodePortServiceParams{
 		Labels: map[string]string{"environment": "testing"},
 		Selector: map[string]string{
-			"role":     "mongo",
+			"service":  "mongo",
 			"podindex": "0",
 		},
 		PortName:   "mongo",

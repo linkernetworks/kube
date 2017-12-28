@@ -14,7 +14,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
-func TestConnect(t *testing.T) {
+func TestConnectWith(t *testing.T) {
 	if _, defined := os.LookupEnv("TEST_K8S"); !defined {
 		t.Skip("TEST_K8S is not set.")
 	}
@@ -24,7 +24,9 @@ func TestConnect(t *testing.T) {
 	clientset, err := ksvc.CreateClientset()
 	assert.NoError(t, err)
 
-	newcf, err := Connect(clientset, cf)
+	DeleteNodePortServices(clientset)
+
+	newcf, err := ConnectWith(clientset, cf)
 	assert.NoError(t, err)
 
 	m := mongo.NewMongoService(newcf.Mongo.Url)
