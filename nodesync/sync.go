@@ -47,7 +47,6 @@ func (nts *NodeSync) Sync() Signal {
 
 			node := CreateNodeEntity(n)
 			logger.Info("Nodes state added")
-			logger.Info(node)
 			err := nts.UpsertNode(&node)
 			if err != nil {
 				logger.Error(err)
