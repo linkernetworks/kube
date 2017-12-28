@@ -24,7 +24,7 @@ func TestConnectWith(t *testing.T) {
 	clientset, err := ksvc.CreateClientset()
 	assert.NoError(t, err)
 
-	// DeleteNodePortServices(clientset)
+	DeleteNodePortServices(clientset)
 
 	newcf, err := ConnectWith(clientset, cf)
 	assert.NoError(t, err)
@@ -46,7 +46,7 @@ func TestAllocateNodePortServices(t *testing.T) {
 	clientset, err := ksvc.CreateClientset()
 	assert.NoError(t, err)
 
-	// DeleteNodePortServices(clientset)
+	DeleteNodePortServices(clientset)
 
 	err = AllocateNodePortServices(clientset, cf)
 	assert.NoError(t, err)
