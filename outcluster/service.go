@@ -90,6 +90,9 @@ func AllocateMongoExternalService(clientset *kubernetes.Clientset, name string) 
 func ConnectWith(clientset *kubernetes.Clientset, cf config.Config) (config.Config, error) {
 	var dst = cf
 
+	// Cleanup the old nodeport services
+	DeleteNodePortServices(clientset)
+
 	if err := AllocateNodePortServices(clientset, cf); err != nil {
 		return dst, err
 	}
