@@ -107,7 +107,7 @@ func CreateNodeEntity(no *corev1.Node) entity.Node {
 		Name:              no.GetName(),
 		ClusterName:       no.GetClusterName(),
 		CreationTimestamp: no.GetCreationTimestamp().Time,
-		Labels:            no.GetLabels(),
+		Labels:            createLabelSlice(no.GetLabels()),
 		Allocatable: entity.Allocatable{
 			CPU:       no.Status.Allocatable.Cpu().MilliValue(),
 			Memory:    no.Status.Allocatable.Memory().MilliValue(),
@@ -132,6 +132,15 @@ func CreateNodeEntity(no *corev1.Node) entity.Node {
 		}
 	}
 	return node
+}
+
+func createLabelSlice(m map[string]string) []string {
+	s := make([]string, 0, len(m))
+	for k, v := range m {
+		l := k + "=" + v
+		s = append(s, l)
+	}
+	return s
 }
 
 func (nts *NodeSync) UpsertNode(node *entity.Node) error {
