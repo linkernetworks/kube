@@ -84,7 +84,17 @@ func AllocateMongoExternalService(clientset *kubernetes.Clientset, name string) 
 		return err
 	}
 	return err
+}
 
+// ConnectWith creates the external services and rewrite the config
+func ConnectWith(clientset *kubernetes.Clientset, cf config.Config) (config.Config, error) {
+	var dst = cf
+
+	if err := AllocateNodePortServices(clientset, cf); err != nil {
+		return dst, err
+	}
+
+	return Rewrite(clientset, dst)
 }
 
 func ConnectAndRewrite(cf config.Config) (config.Config, error) {
@@ -142,17 +152,6 @@ func Rewrite(clientset *kubernetes.Clientset, cf config.Config) (config.Config, 
 		break
 	}
 	return dst, nil
-}
-
-// ConnectWith creates the external services and rewrite the config
-func ConnectWith(clientset *kubernetes.Clientset, cf config.Config) (config.Config, error) {
-	var dst = cf
-
-	if err := AllocateNodePortServices(clientset, cf); err != nil {
-		return dst, err
-	}
-
-	return Rewrite(clientset, dst)
 }
 
 func NewInfluxdbExternalService(name string) *v1.Service {
