@@ -47,6 +47,7 @@ func (nts *NodeSync) Sync() Signal {
 
 			node := CreateNodeEntity(n)
 			logger.Info("Nodes state added")
+			logger.Info(node)
 			err := nts.UpsertNode(&node)
 			if err != nil {
 				logger.Error(err)
@@ -107,7 +108,7 @@ func CreateNodeEntity(no *corev1.Node) entity.Node {
 		Name:              no.GetName(),
 		ClusterName:       no.GetClusterName(),
 		CreationTimestamp: no.GetCreationTimestamp().Time,
-		Labels:            no.GetLabels(),
+		Labels:            mapToSlice(no.GetLabels()),
 		Allocatable: entity.Allocatable{
 			CPU:       no.Status.Allocatable.Cpu().MilliValue(),
 			Memory:    no.Status.Allocatable.Memory().MilliValue(),
@@ -132,6 +133,15 @@ func CreateNodeEntity(no *corev1.Node) entity.Node {
 		}
 	}
 	return node
+}
+
+func mapToSlice(m map[string]string) []string {
+	s := make([]string, 0, len(m))
+	for k, v := range m {
+		l := k + "=" + v
+		s = append(s, l)
+	}
+	return s
 }
 
 func (nts *NodeSync) UpsertNode(node *entity.Node) error {
