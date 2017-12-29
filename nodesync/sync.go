@@ -164,7 +164,8 @@ func (nts *NodeSync) FetchNodeNames() []string {
 	return nodeNames
 }
 
-func (nts *NodeSync) Prune(newNodeNames []string) error {
+func (nts *NodeSync) Prune() error {
+	newNodeNames := nts.FetchNodeNames()
 	nodes := []entity.Node{}
 	err := nts.context.C(entity.NodeCollectionName).Find(nil).Select(bson.M{"name": 1}).All(&nodes)
 	if err != nil {
@@ -191,8 +192,7 @@ func (nts *NodeSync) Polling() {
 		select {
 		case <-pruneTicker.C:
 			logger.Info("[Polling] Pruning nodes...")
-			nodeNames := nts.FetchNodeNames()
-			nts.Prune(nodeNames)
+			nts.Prune()
 		case <-updateTicker.C:
 			logger.Info("[Polling] Update nodes...")
 			nodes := nts.FetchNodes()
