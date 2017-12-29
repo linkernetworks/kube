@@ -64,6 +64,10 @@ func TestNodeInCluster(t *testing.T) {
 }
 
 func TestFetchNodes(t *testing.T) {
+	if _, ok := os.LookupEnv("TEST_K8S"); !ok {
+		t.Skip("Skip kubernetes related tests")
+		return
+	}
 
 	cf := config.Read(testingConfigPath)
 
@@ -85,6 +89,11 @@ func TestFetchNodes(t *testing.T) {
 }
 
 func TestFetchNodesName(t *testing.T) {
+	if _, ok := os.LookupEnv("TEST_K8S"); !ok {
+		t.Skip("Skip kubernetes related tests")
+		return
+	}
+
 	cf := config.Read(testingConfigPath)
 
 	ksvc := kubernetes.NewFromConfig(cf.Kubernetes)
