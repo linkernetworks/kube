@@ -40,29 +40,16 @@ type Signal chan bool
 
 func (nts *NodeSync) Sync() Signal {
 	signal := make(Signal, 1)
-
-	ticker := time.NewTicker(5 * time.Second)
-	go func() {
-		for {
-			select {
-			case <-ticker.C:
-				nodesName := nts.FetchNewNodesName()
-				nts.Prune(nodesName)
-			}
-		}
-
-	}()
-
 	_, controller := kubemon.WatchNodes(nts.clientset, fields.Everything(), cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			n := obj.(*corev1.Node)
 			nts.stats.Added++
 
 			node := CreateNodeEntity(n)
-			logger.Info("Nodes state added")
+			logger.Info("[Event] Nodes state added")
 			err := nts.UpsertNode(&node)
 			if err != nil {
-				logger.Error(err)
+				logger.Error("Upsert node error:", err)
 			}
 
 			select {
@@ -74,10 +61,10 @@ func (nts *NodeSync) Sync() Signal {
 			nts.stats.Updated++
 
 			node := CreateNodeEntity(n)
-			logger.Info("Nodes state deleted")
+			logger.Info("[Event] Nodes state deleted")
 			err := nts.RemoveNodeByName(node.Name)
 			if err != nil {
-				logger.Error(err)
+				logger.Error("Remove node error:", err)
 			}
 
 			select {
@@ -89,10 +76,10 @@ func (nts *NodeSync) Sync() Signal {
 			nts.stats.Deleted++
 
 			node := CreateNodeEntity(n)
-			logger.Info("Nodes state updated")
+			logger.Info("[Event] Nodes state updated")
 			err := nts.UpsertNode(&node)
 			if err != nil {
-				logger.Error(err)
+				logger.Error("Upsert node error:", err)
 			}
 
 			select {
@@ -101,7 +88,7 @@ func (nts *NodeSync) Sync() Signal {
 		},
 	})
 	go controller.Run(nts.stop)
-
+	go nts.Polling()
 	return signal
 }
 
@@ -147,15 +134,6 @@ func CreateNodeEntity(no *corev1.Node) entity.Node {
 	return node
 }
 
-func createLabelSlice(m map[string]string) []string {
-	s := make([]string, 0, len(m))
-	for k, v := range m {
-		l := k + "=" + v
-		s = append(s, l)
-	}
-	return s
-}
-
 func (nts *NodeSync) UpsertNode(node *entity.Node) error {
 	update := bson.M{"$set": node}
 	q := bson.M{"name": node.Name}
@@ -168,33 +146,74 @@ func (nts *NodeSync) RemoveNodeByName(name string) error {
 	return nts.context.C(entity.NodeCollectionName).Remove(q)
 }
 
-func (nts *NodeSync) FetchNewNodesName() []string {
-	var nodesName []string
+func (nts *NodeSync) FetchNodes() []*corev1.Node {
+	var nodes []*corev1.Node
 	nodeList, _ := kubemon.GetNodes(nts.clientset)
 	for _, no := range nodeList.Items {
-		nodesName = append(nodesName, no.Name)
+		nodes = append(nodes, &no)
 	}
-	logger.Infof("Current Nodes: %v", nodesName)
-	return nodesName
+	return nodes
 }
 
-func (nts *NodeSync) Prune(newNodesName []string) error {
+func (nts *NodeSync) FetchNodeNames() []string {
+	var nodeNames []string
+	nodeList, _ := kubemon.GetNodes(nts.clientset)
+	for _, no := range nodeList.Items {
+		nodeNames = append(nodeNames, no.Name)
+	}
+	return nodeNames
+}
+
+func (nts *NodeSync) Prune(newNodeNames []string) error {
 	nodes := []entity.Node{}
 	err := nts.context.C(entity.NodeCollectionName).Find(nil).Select(bson.M{"name": 1}).All(&nodes)
 	if err != nil {
 		return err
 	}
+	// check mongodb record if node doesn't exist in current cluster than remove the record
 	for _, n := range nodes {
-		if !nodeInCluster(n.Name, newNodesName) {
-			logger.Info("Pruning database...")
+		if !nodeInCluster(n.Name, newNodeNames) {
+			logger.Info("Pruning nodes...")
 			err := nts.context.C(entity.NodeCollectionName).Remove(bson.M{"name": n.Name})
 			if err != nil {
-				logger.Error("Pruning database error")
+				logger.Error("Pruning nodes error")
 				return err
 			}
 		}
 	}
 	return nil
+}
+
+func (nts *NodeSync) Polling() {
+	updateTicker := time.NewTicker(5 * time.Second)
+	pruneTicker := time.NewTicker(10 * time.Second)
+	for {
+		select {
+		case <-pruneTicker.C:
+			logger.Info("[Polling] Pruning nodes...")
+			nodeNames := nts.FetchNodeNames()
+			nts.Prune(nodeNames)
+		case <-updateTicker.C:
+			logger.Info("[Polling] Update nodes...")
+			nodes := nts.FetchNodes()
+			for _, n := range nodes {
+				node := CreateNodeEntity(n)
+				err := nts.UpsertNode(&node)
+				if err != nil {
+					logger.Error("Upsert node error:", err)
+				}
+			}
+		}
+	}
+}
+
+func createLabelSlice(m map[string]string) []string {
+	s := make([]string, 0, len(m))
+	for k, v := range m {
+		l := k + "=" + v
+		s = append(s, l)
+	}
+	return s
 }
 
 func nodeInCluster(n string, list []string) bool {

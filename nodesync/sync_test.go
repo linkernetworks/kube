@@ -46,3 +46,60 @@ Watch:
 	updated := nts.stats.Added + nts.stats.Deleted + nts.stats.Updated
 	assert.NotEqual(t, updated, 0, "should be added, deleted or updated events")
 }
+
+func TestNodeInCluster(t *testing.T) {
+	if _, ok := os.LookupEnv("TEST_K8S"); !ok {
+		t.Skip("Skip kubernetes related tests")
+		return
+	}
+
+	nodes := []string{"gke-aurora-dev-default-pool-c6346db6-7x9b", "gke-aurora-dev-notebook-pool-a7f99c3f-mww8"}
+
+	a := nodeInCluster("gke-aurora-dev-notebook-pool-a7f99c3f-mww8", nodes)
+	assert.True(t, a)
+
+	b := nodeInCluster("gke-aurora-dev-notebook-pool-a7f99c3f-999", nodes)
+	assert.False(t, b)
+
+}
+
+func TestFetchNodes(t *testing.T) {
+
+	cf := config.Read(testingConfigPath)
+
+	ksvc := kubernetes.NewFromConfig(cf.Kubernetes)
+	clientset, err := ksvc.CreateClientset()
+	assert.NoError(t, err)
+
+	ms := mongo.NewMongoService(cf.Mongo.Url)
+	assert.NotNil(t, ms)
+
+	nts := New(clientset, ms)
+	assert.NotNil(t, nts)
+
+	nodes := nts.FetchNodes()
+	if assert.NotEmpty(t, nodes) {
+		assert.NotNil(t, nodes[0])
+	}
+
+}
+
+func TestFetchNodesName(t *testing.T) {
+	cf := config.Read(testingConfigPath)
+
+	ksvc := kubernetes.NewFromConfig(cf.Kubernetes)
+	clientset, err := ksvc.CreateClientset()
+	assert.NoError(t, err)
+
+	ms := mongo.NewMongoService(cf.Mongo.Url)
+	assert.NotNil(t, ms)
+
+	nts := New(clientset, ms)
+	assert.NotNil(t, nts)
+
+	nodeNames := nts.FetchNodeNames()
+	assert.NotEmpty(t, nodeNames)
+	if assert.NotEmpty(t, nodeNames) {
+		assert.NotZero(t, len(nodeNames[0]))
+	}
+}
