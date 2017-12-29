@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
+	"time"
 
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -40,6 +41,18 @@ type Signal chan bool
 func (nts *NodeSync) Sync() Signal {
 	signal := make(Signal, 1)
 
+	ticker := time.NewTicker(5 * time.Second)
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				nodesName := nts.FetchNewNodesName()
+				nts.Prune(nodesName)
+			}
+		}
+
+	}()
+
 	_, controller := kubemon.WatchNodes(nts.clientset, fields.Everything(), cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			n := obj.(*corev1.Node)
@@ -62,7 +75,7 @@ func (nts *NodeSync) Sync() Signal {
 
 			node := CreateNodeEntity(n)
 			logger.Info("Nodes state deleted")
-			err := nts.RemoveNode(&node)
+			err := nts.RemoveNodeByName(node.Name)
 			if err != nil {
 				logger.Error(err)
 			}
@@ -150,7 +163,45 @@ func (nts *NodeSync) UpsertNode(node *entity.Node) error {
 	return err
 }
 
-func (nts *NodeSync) RemoveNode(node *entity.Node) error {
-	q := bson.M{"name": node.Name}
+func (nts *NodeSync) RemoveNodeByName(name string) error {
+	q := bson.M{"name": name}
 	return nts.context.C(entity.NodeCollectionName).Remove(q)
+}
+
+func (nts *NodeSync) FetchNewNodesName() []string {
+	var nodesName []string
+	nodeList, _ := kubemon.GetNodes(nts.clientset)
+	for _, no := range nodeList.Items {
+		nodesName = append(nodesName, no.Name)
+	}
+	logger.Infof("Current Nodes: %v", nodesName)
+	return nodesName
+}
+
+func (nts *NodeSync) Prune(newNodesName []string) error {
+	results := []entity.Node{}
+	err := nts.context.C(entity.NodeCollectionName).Find(nil).All(&results)
+	if err != nil {
+		return err
+	}
+	for _, r := range results {
+		if !nodeInCluster(r.Name, newNodesName) {
+			logger.Info("Pruning database...")
+			err := nts.context.C(entity.NodeCollectionName).Remove(bson.M{"name": r.Name})
+			if err != nil {
+				logger.Error("Pruning database error")
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func nodeInCluster(n string, list []string) bool {
+	for _, l := range list {
+		if l == n {
+			return true
+		}
+	}
+	return false
 }
