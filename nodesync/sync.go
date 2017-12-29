@@ -179,15 +179,15 @@ func (nts *NodeSync) FetchNewNodesName() []string {
 }
 
 func (nts *NodeSync) Prune(newNodesName []string) error {
-	results := []entity.Node{}
-	err := nts.context.C(entity.NodeCollectionName).Find(nil).All(&results)
+	nodes := []entity.Node{}
+	err := nts.context.C(entity.NodeCollectionName).Find(nil).Select(bson.M{"name": 1}).All(&nodes)
 	if err != nil {
 		return err
 	}
-	for _, r := range results {
-		if !nodeInCluster(r.Name, newNodesName) {
+	for _, n := range nodes {
+		if !nodeInCluster(n.Name, newNodesName) {
 			logger.Info("Pruning database...")
-			err := nts.context.C(entity.NodeCollectionName).Remove(bson.M{"name": r.Name})
+			err := nts.context.C(entity.NodeCollectionName).Remove(bson.M{"name": n.Name})
 			if err != nil {
 				logger.Error("Pruning database error")
 				return err
