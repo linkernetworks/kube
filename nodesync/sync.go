@@ -203,7 +203,7 @@ func (nts *NodeSync) Prune() error {
 }
 
 func (nts *NodeSync) StartPrune() {
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(5 * time.Minute)
 	for {
 		select {
 		case <-ticker.C:
