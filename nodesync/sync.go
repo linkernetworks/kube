@@ -40,13 +40,30 @@ type Signal chan bool
 
 func (nts *NodeSync) Sync() Signal {
 	signal := make(Signal, 1)
+	// fetch all nodes from cluster and save to mongodb
+	logger.Info("fetching all nodes")
+	nodes := nts.FetchNodes()
+	for _, n := range nodes {
+		nodeEntity := LoadNodeEntity(n)
+		err := nts.UpsertNode(&nodeEntity)
+		if err != nil {
+			logger.Error("Upsert node error:", err)
+		}
+	}
+
+	// cleanup old node record
+	logger.Info("cleaning old record")
+	nts.Prune()
+
+	logger.Info("start watching node change events...")
+	// keep watch node change events
 	_, controller := kubemon.WatchNodes(nts.clientset, fields.Everything(), cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			n := obj.(*corev1.Node)
 			nts.stats.Added++
 
-			node := CreateNodeEntity(n)
-			logger.Info("[Event] Nodes state added")
+			node := LoadNodeEntity(n)
+			logger.Info("[Event] nodes state added")
 			err := nts.UpsertNode(&node)
 			if err != nil {
 				logger.Error("Upsert node error:", err)
@@ -60,8 +77,8 @@ func (nts *NodeSync) Sync() Signal {
 			n := obj.(*corev1.Node)
 			nts.stats.Updated++
 
-			node := CreateNodeEntity(n)
-			logger.Info("[Event] Nodes state deleted")
+			node := LoadNodeEntity(n)
+			logger.Info("[Event] nodes state deleted")
 			err := nts.RemoveNodeByName(node.Name)
 			if err != nil {
 				logger.Error("Remove node error:", err)
@@ -75,8 +92,8 @@ func (nts *NodeSync) Sync() Signal {
 			n := newObj.(*corev1.Node)
 			nts.stats.Deleted++
 
-			node := CreateNodeEntity(n)
-			logger.Info("[Event] Nodes state updated")
+			node := LoadNodeEntity(n)
+			logger.Info("[Event] nodes state updated")
 			err := nts.UpsertNode(&node)
 			if err != nil {
 				logger.Error("Upsert node error:", err)
@@ -88,7 +105,7 @@ func (nts *NodeSync) Sync() Signal {
 		},
 	})
 	go controller.Run(nts.stop)
-	go nts.Polling()
+	go nts.StartPrune()
 	return signal
 }
 
@@ -102,7 +119,7 @@ func (nts *NodeSync) Stop() {
 	nts.stop <- e
 }
 
-func CreateNodeEntity(no *corev1.Node) entity.Node {
+func LoadNodeEntity(no *corev1.Node) entity.Node {
 	node := entity.Node{
 		Name:              no.GetName(),
 		ClusterName:       no.GetClusterName(),
@@ -185,24 +202,13 @@ func (nts *NodeSync) Prune() error {
 	return nil
 }
 
-func (nts *NodeSync) Polling() {
-	updateTicker := time.NewTicker(5 * time.Second)
-	pruneTicker := time.NewTicker(10 * time.Second)
+func (nts *NodeSync) StartPrune() {
+	ticker := time.NewTicker(10 * time.Second)
 	for {
 		select {
-		case <-pruneTicker.C:
-			logger.Info("[Polling] Pruning nodes...")
+		case <-ticker.C:
+			logger.Info("[Polling] pruning nodes...")
 			nts.Prune()
-		case <-updateTicker.C:
-			logger.Info("[Polling] Update nodes...")
-			nodes := nts.FetchNodes()
-			for _, n := range nodes {
-				node := CreateNodeEntity(n)
-				err := nts.UpsertNode(&node)
-				if err != nil {
-					logger.Error("Upsert node error:", err)
-				}
-			}
 		}
 	}
 }
