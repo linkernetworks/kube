@@ -172,17 +172,12 @@ func (nts *NodeSync) FetchNodes() []*corev1.Node {
 	return nodes
 }
 
-func (nts *NodeSync) FetchNodeNames() []string {
-	var nodeNames []string
-	nodeList, _ := kubemon.GetNodes(nts.clientset)
-	for _, no := range nodeList.Items {
-		nodeNames = append(nodeNames, no.Name)
-	}
-	return nodeNames
-}
-
 func (nts *NodeSync) Prune() error {
-	newNodeNames := nts.FetchNodeNames()
+	var newNodeNames []string
+	nodesList := nts.FetchNodes()
+	for _, n := range nodesList {
+		newNodeNames = append(newNodeNames, n.Name)
+	}
 	nodes := []entity.Node{}
 	err := nts.context.C(entity.NodeCollectionName).Find(nil).Select(bson.M{"name": 1}).All(&nodes)
 	if err != nil {

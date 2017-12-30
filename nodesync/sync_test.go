@@ -42,12 +42,6 @@ Watch:
 		}
 	}
 
-	nodeNames := nts.FetchNodeNames()
-	assert.NotEmpty(t, nodeNames)
-	if assert.NotEmpty(t, nodeNames) {
-		assert.NotZero(t, len(nodeNames[0]))
-	}
-
 	nodes := nts.FetchNodes()
 	if assert.NotEmpty(t, nodes) {
 		assert.NotNil(t, nodes[0])
