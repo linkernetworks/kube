@@ -43,6 +43,7 @@ func (nts *NodeSync) Sync() Signal {
 	// fetch all nodes from cluster and save to mongodb
 	logger.Info("fetching all nodes")
 	nodes := nts.FetchNodes()
+	logger.Infof("found %d nodes", len(nodes))
 	for _, n := range nodes {
 		nodeEntity := LoadNodeEntity(n)
 		err := nts.UpsertNode(&nodeEntity)
@@ -137,6 +138,15 @@ func LoadNodeEntity(no *corev1.Node) entity.Node {
 			POD:       no.Status.Capacity.Pods().Value(),
 			NvidiaGPU: no.Status.Capacity.NvidiaGPU().MilliValue(),
 		},
+		NodeInfo: entity.NodeSystemInfo{
+			MachineID:               no.Status.NodeInfo.MachineID,
+			KernelVersion:           no.Status.NodeInfo.KernelVersion,
+			OSImage:                 no.Status.NodeInfo.OSImage,
+			ContainerRuntimeVersion: no.Status.NodeInfo.ContainerRuntimeVersion,
+			KubeletVersion:          no.Status.NodeInfo.KubeletVersion,
+			OperatingSystem:         no.Status.NodeInfo.OperatingSystem,
+			Architecture:            no.Status.NodeInfo.Architecture,
+		},
 	}
 	for _, addr := range no.Status.Addresses {
 		switch addr.Type {
@@ -202,7 +212,7 @@ func (nts *NodeSync) StartPrune() {
 	for {
 		select {
 		case <-ticker.C:
-			logger.Info("[Polling] pruning nodes...")
+			logger.Info("[Polling] start pruning nodes...")
 			nts.Prune()
 		}
 	}
