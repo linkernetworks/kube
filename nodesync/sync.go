@@ -45,7 +45,12 @@ func (nts *NodeSync) Sync() Signal {
 	nodes := nts.FetchNodes()
 	logger.Infof("found %d nodes", len(nodes))
 	for _, n := range nodes {
-		nodeEntity := LoadNodeEntity(n)
+		// fetch all pods on each node
+		pods := nts.FetchPodsByNode(n)
+
+		nodeEntity := LoadNodeEntity(&n)
+		UpdateResourceInfo(&nodeEntity, pods)
+
 		err := nts.UpsertNode(&nodeEntity)
 		if err != nil {
 			logger.Error("Upsert node error:", err)
@@ -63,9 +68,15 @@ func (nts *NodeSync) Sync() Signal {
 			n := obj.(*corev1.Node)
 			nts.stats.Added++
 
-			node := LoadNodeEntity(n)
+			logger.Info(n.Name)
+			logger.Info(n.Name)
+
+			nodeEntity := LoadNodeEntity(n)
+
+			// UpdateResourceInfo(&nodeEntity, pods)
+
 			logger.Info("[Event] nodes state added")
-			err := nts.UpsertNode(&node)
+			err := nts.UpsertNode(&nodeEntity)
 			if err != nil {
 				logger.Error("Upsert node error:", err)
 			}
@@ -78,9 +89,9 @@ func (nts *NodeSync) Sync() Signal {
 			n := obj.(*corev1.Node)
 			nts.stats.Updated++
 
-			node := LoadNodeEntity(n)
+			nodeEntity := LoadNodeEntity(n)
 			logger.Info("[Event] nodes state deleted")
-			err := nts.RemoveNodeByName(node.Name)
+			err := nts.RemoveNodeByName(nodeEntity.Name)
 			if err != nil {
 				logger.Error("Remove node error:", err)
 			}
@@ -93,9 +104,11 @@ func (nts *NodeSync) Sync() Signal {
 			n := newObj.(*corev1.Node)
 			nts.stats.Deleted++
 
-			node := LoadNodeEntity(n)
+			nodeEntity := LoadNodeEntity(n)
+			// UpdateResourceInfo(&nodeEntity, pods)
+
 			logger.Info("[Event] nodes state updated")
-			err := nts.UpsertNode(&node)
+			err := nts.UpsertNode(&nodeEntity)
 			if err != nil {
 				logger.Error("Upsert node error:", err)
 			}
@@ -107,6 +120,7 @@ func (nts *NodeSync) Sync() Signal {
 	})
 	go controller.Run(nts.stop)
 	go nts.StartPrune()
+	go nts.StartUpdatePodResource()
 	return signal
 }
 
@@ -161,6 +175,34 @@ func LoadNodeEntity(no *corev1.Node) entity.Node {
 	return node
 }
 
+func UpdateResourceInfo(node *entity.Node, pods []corev1.Pod) {
+	var totalReqCPU, totalReqMem, totalReqGPU, totalReqPod int64
+	var totalLimCPU, totalLimMem, totalLimGPU, totalLimPod int64
+	for _, p := range pods {
+		for _, c := range p.Spec.Containers {
+			totalReqCPU += c.Resources.Requests.Cpu().MilliValue()
+			totalReqMem += c.Resources.Requests.Memory().MilliValue()
+			totalReqGPU += c.Resources.Requests.NvidiaGPU().MilliValue()
+			totalReqPod += c.Resources.Requests.Pods().Value()
+
+			totalLimCPU += c.Resources.Limits.Cpu().MilliValue()
+			totalLimMem += c.Resources.Limits.Memory().MilliValue()
+			totalLimGPU += c.Resources.Limits.NvidiaGPU().MilliValue()
+			totalLimPod += c.Resources.Limits.Pods().MilliValue()
+		}
+	}
+	node.Requests.CPU = totalReqCPU
+	node.Requests.Memory = totalReqMem
+	node.Requests.NvidiaGPU = totalReqCPU
+	node.Requests.POD = totalReqCPU
+
+	node.Limits.CPU = totalLimCPU
+	node.Limits.Memory = totalLimMem
+	node.Limits.NvidiaGPU = totalLimGPU
+	node.Limits.POD = totalLimPod
+	// logger.Info(node)
+}
+
 func (nts *NodeSync) UpsertNode(node *entity.Node) error {
 	update := bson.M{"$set": node}
 	q := bson.M{"name": node.Name}
@@ -173,13 +215,26 @@ func (nts *NodeSync) RemoveNodeByName(name string) error {
 	return nts.context.C(entity.NodeCollectionName).Remove(q)
 }
 
-func (nts *NodeSync) FetchNodes() []*corev1.Node {
-	var nodes []*corev1.Node
+func (nts *NodeSync) FetchNodes() []corev1.Node {
+	var nodes []corev1.Node
 	nodeList, _ := kubemon.GetNodes(nts.clientset)
 	for _, no := range nodeList.Items {
-		nodes = append(nodes, &no)
+		// logger.Info(no.GetName())
+		nodes = append(nodes, no)
 	}
 	return nodes
+}
+
+func (nts *NodeSync) FetchPodsByNode(no corev1.Node) []corev1.Pod {
+	var pods []corev1.Pod
+	podList, _ := kubemon.GetPods(nts.clientset, corev1.NamespaceAll)
+	for _, po := range podList.Items {
+		if po.Status.Phase == "Running" && po.Spec.NodeName == no.GetName() {
+			// logger.Info(no.GetName() + ">>>>" + po.GetName())
+			pods = append(pods, po)
+		}
+	}
+	return pods
 }
 
 func (nts *NodeSync) Prune() error {
@@ -214,6 +269,16 @@ func (nts *NodeSync) StartPrune() {
 		case <-ticker.C:
 			logger.Info("[Polling] start pruning nodes...")
 			nts.Prune()
+		}
+	}
+}
+
+func (nts *NodeSync) StartUpdatePodResource() {
+	ticker := time.NewTicker(5 * time.Minute)
+	for {
+		select {
+		case <-ticker.C:
+			logger.Info("[Polling] start updating pod resources...")
 		}
 	}
 }
