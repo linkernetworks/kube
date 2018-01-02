@@ -47,10 +47,8 @@ func (nts *NodeSync) Sync() Signal {
 	for _, n := range nodes {
 		// fetch all pods on each node
 		pods := nts.FetchPodsByNode(n)
-
 		nodeEntity := LoadNodeEntity(&n)
 		UpdateResourceInfo(&nodeEntity, pods)
-
 		err := nts.UpsertNode(&nodeEntity)
 		if err != nil {
 			logger.Error("Upsert node error:", err)
@@ -68,13 +66,7 @@ func (nts *NodeSync) Sync() Signal {
 			n := obj.(*corev1.Node)
 			nts.stats.Added++
 
-			logger.Info(n.Name)
-			logger.Info(n.Name)
-
 			nodeEntity := LoadNodeEntity(n)
-
-			// UpdateResourceInfo(&nodeEntity, pods)
-
 			logger.Info("[Event] nodes state added")
 			err := nts.UpsertNode(&nodeEntity)
 			if err != nil {
@@ -105,8 +97,6 @@ func (nts *NodeSync) Sync() Signal {
 			nts.stats.Deleted++
 
 			nodeEntity := LoadNodeEntity(n)
-			// UpdateResourceInfo(&nodeEntity, pods)
-
 			logger.Info("[Event] nodes state updated")
 			err := nts.UpsertNode(&nodeEntity)
 			if err != nil {
@@ -274,11 +264,21 @@ func (nts *NodeSync) StartPrune() {
 }
 
 func (nts *NodeSync) StartUpdatePodResource() {
-	ticker := time.NewTicker(5 * time.Minute)
+	ticker := time.NewTicker(5 * time.Second)
 	for {
 		select {
 		case <-ticker.C:
 			logger.Info("[Polling] start updating pod resources...")
+			nodes := nts.FetchNodes()
+			for _, n := range nodes {
+				pods := nts.FetchPodsByNode(n)
+				nodeEntity := LoadNodeEntity(&n)
+				UpdateResourceInfo(&nodeEntity, pods)
+				err := nts.UpsertNode(&nodeEntity)
+				if err != nil {
+					logger.Error("Upsert node error:", err)
+				}
+			}
 		}
 	}
 }
