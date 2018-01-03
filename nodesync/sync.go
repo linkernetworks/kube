@@ -264,7 +264,7 @@ func (nts *NodeSync) StartPrune() {
 }
 
 func (nts *NodeSync) StartUpdatePodResource() {
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(3 * time.Minute)
 	for {
 		select {
 		case <-ticker.C:
