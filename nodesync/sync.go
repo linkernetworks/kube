@@ -183,8 +183,8 @@ func UpdateResourceInfo(node *entity.Node, pods []corev1.Pod) {
 	}
 	node.Requests.CPU = totalReqCPU
 	node.Requests.Memory = totalReqMem
-	node.Requests.NvidiaGPU = totalReqCPU
-	node.Requests.POD = totalReqCPU
+	node.Requests.NvidiaGPU = totalReqGPU
+	node.Requests.POD = totalReqPod
 
 	node.Limits.CPU = totalLimCPU
 	node.Limits.Memory = totalLimMem
