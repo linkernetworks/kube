@@ -190,7 +190,6 @@ func UpdateResourceInfo(node *entity.Node, pods []corev1.Pod) {
 	node.Limits.Memory = totalLimMem
 	node.Limits.NvidiaGPU = totalLimGPU
 	node.Limits.POD = totalLimPod
-	// logger.Info(node)
 }
 
 func (nts *NodeSync) UpsertNode(node *entity.Node) error {
@@ -209,7 +208,6 @@ func (nts *NodeSync) FetchNodes() []corev1.Node {
 	var nodes []corev1.Node
 	nodeList, _ := kubemon.GetNodes(nts.clientset)
 	for _, no := range nodeList.Items {
-		// logger.Info(no.GetName())
 		nodes = append(nodes, no)
 	}
 	return nodes
@@ -220,7 +218,6 @@ func (nts *NodeSync) FetchPodsByNode(no corev1.Node) []corev1.Pod {
 	podList, _ := kubemon.GetPods(nts.clientset, corev1.NamespaceAll)
 	for _, po := range podList.Items {
 		if po.Status.Phase == "Running" && po.Spec.NodeName == no.GetName() {
-			// logger.Info(no.GetName() + ">>>>" + po.GetName())
 			pods = append(pods, po)
 		}
 	}
