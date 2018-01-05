@@ -132,13 +132,13 @@ func LoadNodeEntity(no *corev1.Node) entity.Node {
 		Labels:            createLabelSlice(no.GetLabels()),
 		Allocatable: entity.Allocatable{
 			CPU:       no.Status.Allocatable.Cpu().MilliValue(),
-			Memory:    no.Status.Allocatable.Memory().MilliValue(),
+			Memory:    no.Status.Allocatable.Memory().Value(),
 			POD:       no.Status.Allocatable.Pods().Value(),
 			NvidiaGPU: GetNvidiaGPU(&no.Status.Allocatable).MilliValue(),
 		},
 		Capacity: entity.Capacity{
 			CPU:       no.Status.Capacity.Cpu().MilliValue(),
-			Memory:    no.Status.Capacity.Memory().MilliValue(),
+			Memory:    no.Status.Capacity.Memory().Value(),
 			POD:       no.Status.Capacity.Pods().Value(),
 			NvidiaGPU: GetNvidiaGPU(&no.Status.Capacity).MilliValue(),
 		},
@@ -171,12 +171,12 @@ func UpdateResourceInfo(node *entity.Node, pods []corev1.Pod) {
 	for _, p := range pods {
 		for _, c := range p.Spec.Containers {
 			totalReqCPU += c.Resources.Requests.Cpu().MilliValue()
-			totalReqMem += c.Resources.Requests.Memory().MilliValue()
+			totalReqMem += c.Resources.Requests.Memory().Value()
 			totalReqGPU += GetNvidiaGPU(&c.Resources.Requests).MilliValue()
 			totalReqPod += c.Resources.Requests.Pods().Value()
 
 			totalLimCPU += c.Resources.Limits.Cpu().MilliValue()
-			totalLimMem += c.Resources.Limits.Memory().MilliValue()
+			totalLimMem += c.Resources.Limits.Memory().Value()
 			totalLimGPU += GetNvidiaGPU(&c.Resources.Limits).MilliValue()
 			totalLimPod += c.Resources.Limits.Pods().MilliValue()
 		}
