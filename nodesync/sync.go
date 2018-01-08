@@ -26,20 +26,18 @@ type NodeStats struct {
 }
 
 type NodeSync struct {
-	clientset          *kubernetes.Clientset
-	context            *mongo.Context
-	stop               chan struct{}
-	stats              NodeStats
-	pruneT             int
-	podResourceUpdateT int
+	clientset *kubernetes.Clientset
+	context   *mongo.Context
+	stop      chan struct{}
+	stats     NodeStats
+	t         int
 }
 
 func New(clientset *kubernetes.Clientset, m *mongo.MongoService) *NodeSync {
 	stop := make(chan struct{})
 	var stats NodeStats
-	pruneT, _ := strconv.Atoi(os.Getenv("PRUNE_PERIODIC"))
-	podResourceUpdateT, _ := strconv.Atoi(os.Getenv("POD_RESOURCE_UPDATE_PERIODIC"))
-	return &NodeSync{clientset, m.NewContext(), stop, stats, pruneT, podResourceUpdateT}
+	t, _ := strconv.Atoi(os.Getenv("NODE_RESOURCE_PERIODIC"))
+	return &NodeSync{clientset, m.NewContext(), stop, stats, t}
 }
 
 type Signal chan bool
@@ -71,7 +69,7 @@ func (nts *NodeSync) Sync() Signal {
 		},
 		DeleteFunc: func(obj interface{}) {
 			n := obj.(*corev1.Node)
-			nts.stats.Updated++
+			nts.stats.Deleted++
 
 			nodeEntity := LoadNodeEntity(n)
 			logger.Info("[Event] nodes state deleted")
@@ -86,7 +84,7 @@ func (nts *NodeSync) Sync() Signal {
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			n := newObj.(*corev1.Node)
-			nts.stats.Deleted++
+			nts.stats.Updated++
 
 			nodeEntity := LoadNodeEntity(n)
 			logger.Info("[Event] nodes state updated")
@@ -257,8 +255,8 @@ func (nts *NodeSync) Prune() error {
 }
 
 func (nts *NodeSync) StartPrune() {
-	logger.Infof("Node information prune periodic time is set to %d minutes", nts.pruneT)
-	ticker := time.NewTicker(time.Duration(nts.pruneT) * time.Minute)
+	logger.Infof("Node information prune periodic time is set to %d minutes", nts.t)
+	ticker := time.NewTicker(time.Duration(nts.t) * time.Minute)
 	logger.Info("[Polling] start pruning nodes...")
 	for {
 		select {
@@ -269,8 +267,8 @@ func (nts *NodeSync) StartPrune() {
 }
 
 func (nts *NodeSync) StartUpdatePodResource() {
-	logger.Infof("Pod resource update periodic time is set to %d minutes", nts.podResourceUpdateT)
-	ticker := time.NewTicker(time.Duration(nts.podResourceUpdateT) * time.Minute)
+	logger.Infof("Pod resource update periodic time is set to %d minutes", nts.t)
+	ticker := time.NewTicker(time.Duration(nts.t) * time.Minute)
 	logger.Info("[Polling] start updating pod resources...")
 	for {
 		select {
