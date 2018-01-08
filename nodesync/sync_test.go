@@ -18,6 +18,8 @@ func TestNodeSync(t *testing.T) {
 		t.Skip("Skip kubernetes related tests")
 		return
 	}
+	os.Setenv("PRUNE_PERIODIC", "5")
+	os.Setenv("POD_RESOURCE_UPDATE_PERIODIC", "3")
 
 	cf := config.Read(testingConfigPath)
 
