@@ -141,13 +141,13 @@ func LoadNodeEntity(no *corev1.Node) entity.Node {
 			CPU:       no.Status.Allocatable.Cpu().MilliValue(),
 			Memory:    no.Status.Allocatable.Memory().Value(),
 			POD:       no.Status.Allocatable.Pods().Value(),
-			NvidiaGPU: GetNvidiaGPU(&no.Status.Allocatable).MilliValue(),
+			NvidiaGPU: GetNvidiaGPU(&no.Status.Allocatable).Value(),
 		},
 		Capacity: entity.Capacity{
 			CPU:       no.Status.Capacity.Cpu().MilliValue(),
 			Memory:    no.Status.Capacity.Memory().Value(),
 			POD:       no.Status.Capacity.Pods().Value(),
-			NvidiaGPU: GetNvidiaGPU(&no.Status.Capacity).MilliValue(),
+			NvidiaGPU: GetNvidiaGPU(&no.Status.Capacity).Value(),
 		},
 		NodeInfo: entity.NodeSystemInfo{
 			MachineID:               no.Status.NodeInfo.MachineID,
