@@ -7,6 +7,8 @@ import (
 	"bitbucket.org/linkernetworks/aurora/src/service/mongo"
 	"gopkg.in/mgo.v2/bson"
 	corev1 "k8s.io/api/core/v1"
+	"os"
+	"strconv"
 
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/kubernetes"
@@ -24,36 +26,26 @@ type NodeStats struct {
 }
 
 type NodeSync struct {
-	clientset *kubernetes.Clientset
-	context   *mongo.Context
-	stop      chan struct{}
-	stats     NodeStats
+	clientset          *kubernetes.Clientset
+	context            *mongo.Context
+	stop               chan struct{}
+	stats              NodeStats
+	pruneT             int
+	podResourceUpdateT int
 }
 
 func New(clientset *kubernetes.Clientset, m *mongo.MongoService) *NodeSync {
 	stop := make(chan struct{})
 	var stats NodeStats
-	return &NodeSync{clientset, m.NewContext(), stop, stats}
+	pruneT, _ := strconv.Atoi(os.Getenv("PRUNE_PERIODIC"))
+	podResourceUpdateT, _ := strconv.Atoi(os.Getenv("POD_RESOURCE_UPDATE_PERIODIC"))
+	return &NodeSync{clientset, m.NewContext(), stop, stats, pruneT, podResourceUpdateT}
 }
 
 type Signal chan bool
 
 func (nts *NodeSync) Sync() Signal {
 	signal := make(Signal, 1)
-	// fetch all nodes from cluster and save to mongodb
-	logger.Info("fetching all nodes")
-	nodes := nts.FetchNodes()
-	logger.Infof("found %d nodes", len(nodes))
-	for _, n := range nodes {
-		// fetch all pods on each node
-		pods := nts.FetchPodsByNode(n)
-		nodeEntity := LoadNodeEntity(&n)
-		UpdateResourceInfo(&nodeEntity, pods)
-		err := nts.UpsertNode(&nodeEntity)
-		if err != nil {
-			logger.Error("Upsert node error:", err)
-		}
-	}
 
 	// cleanup old node record
 	logger.Info("cleaning old record")
@@ -111,6 +103,21 @@ func (nts *NodeSync) Sync() Signal {
 	go controller.Run(nts.stop)
 	go nts.StartPrune()
 	go nts.StartUpdatePodResource()
+
+	// fetch all nodes from cluster and save to mongodb
+	logger.Info("fetching all nodes")
+	nodes := nts.FetchNodes()
+	logger.Infof("found %d nodes", len(nodes))
+	for _, n := range nodes {
+		// fetch all pods on each node
+		pods := nts.FetchPodsByNode(n)
+		nodeEntity := LoadNodeEntity(&n)
+		UpdateResourceInfo(&nodeEntity, pods)
+		err := nts.UpsertNode(&nodeEntity)
+		if err != nil {
+			logger.Error("Upsert node error:", err)
+		}
+	}
 	return signal
 }
 
@@ -250,23 +257,27 @@ func (nts *NodeSync) Prune() error {
 }
 
 func (nts *NodeSync) StartPrune() {
-	ticker := time.NewTicker(5 * time.Minute)
+	logger.Infof("Node information prune periodic time is set to %d minutes", nts.pruneT)
+	ticker := time.NewTicker(time.Duration(nts.pruneT) * time.Minute)
+	logger.Info("[Polling] start pruning nodes...")
 	for {
 		select {
 		case <-ticker.C:
-			logger.Info("[Polling] start pruning nodes...")
 			nts.Prune()
 		}
 	}
 }
 
 func (nts *NodeSync) StartUpdatePodResource() {
-	ticker := time.NewTicker(3 * time.Minute)
+	logger.Infof("Pod resource update periodic time is set to %d minutes", nts.podResourceUpdateT)
+	ticker := time.NewTicker(time.Duration(nts.podResourceUpdateT) * time.Minute)
+	logger.Info("[Polling] start updating pod resources...")
 	for {
 		select {
 		case <-ticker.C:
-			logger.Info("[Polling] start updating pod resources...")
+			logger.Info("fetching all nodes")
 			nodes := nts.FetchNodes()
+			logger.Infof("found %d nodes", len(nodes))
 			for _, n := range nodes {
 				pods := nts.FetchPodsByNode(n)
 				nodeEntity := LoadNodeEntity(&n)
