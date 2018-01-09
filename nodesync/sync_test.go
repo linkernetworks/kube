@@ -26,7 +26,7 @@ func TestNodeSync(t *testing.T) {
 	clientset, err := ksvc.CreateClientset()
 	assert.NoError(t, err)
 
-	ms := mongo.NewMongoService(cf.Mongo.Url)
+	ms := mongo.New(cf.Mongo.Url)
 	assert.NotNil(t, ms)
 
 	nts := New(clientset, ms)

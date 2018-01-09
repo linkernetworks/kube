@@ -29,7 +29,7 @@ func TestConnectWith(t *testing.T) {
 	newcf, err := ConnectWith(clientset, cf)
 	assert.NoError(t, err)
 
-	m := mongo.NewMongoService(newcf.Mongo.Url)
+	m := mongo.New(newcf.Mongo.Url)
 	assert.NotNil(t, m)
 
 	r := redis.NewService(newcf.Redis)
