@@ -33,7 +33,7 @@ type NodeSync struct {
 	t         int
 }
 
-func New(clientset *kubernetes.Clientset, m *mongo.MongoService) *NodeSync {
+func New(clientset *kubernetes.Clientset, m *mongo.Service) *NodeSync {
 	stop := make(chan struct{})
 	var stats NodeStats
 	t, _ := strconv.Atoi(os.Getenv("NODE_RESOURCE_PERIODIC"))
