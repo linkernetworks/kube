@@ -44,6 +44,7 @@ type Signal chan bool
 
 func (nts *NodeSync) Sync() Signal {
 	signal := make(Signal, 1)
+	nodeEvent := make(chan entity.Node)
 
 	// cleanup old node record
 	logger.Info("cleaning old record")
@@ -58,11 +59,8 @@ func (nts *NodeSync) Sync() Signal {
 
 			nodeEntity := LoadNodeEntity(n)
 			logger.Info("[Event] nodes state added")
-			err := nts.UpsertNode(&nodeEntity)
-			if err != nil {
-				logger.Error("Upsert node error:", err)
-			}
 
+			nodeEvent <- nodeEntity
 			select {
 			case signal <- true:
 			}
@@ -73,11 +71,8 @@ func (nts *NodeSync) Sync() Signal {
 
 			nodeEntity := LoadNodeEntity(n)
 			logger.Info("[Event] nodes state deleted")
-			err := nts.RemoveNodeByName(nodeEntity.Name)
-			if err != nil {
-				logger.Error("Remove node error:", err)
-			}
 
+			nodeEvent <- nodeEntity
 			select {
 			case signal <- true:
 			}
@@ -88,34 +83,16 @@ func (nts *NodeSync) Sync() Signal {
 
 			nodeEntity := LoadNodeEntity(n)
 			logger.Info("[Event] nodes state updated")
-			err := nts.UpsertNode(&nodeEntity)
-			if err != nil {
-				logger.Error("Upsert node error:", err)
-			}
 
+			nodeEvent <- nodeEntity
 			select {
 			case signal <- true:
 			}
 		},
 	})
 	go controller.Run(nts.stop)
-	go nts.StartPrune()
-	go nts.StartUpdatePodResource()
-
-	// fetch all nodes from cluster and save to mongodb
-	logger.Info("fetching all nodes")
-	nodes := nts.FetchNodes()
-	logger.Infof("found %d nodes", len(nodes))
-	for _, n := range nodes {
-		// fetch all pods on each node
-		pods := nts.FetchPodsByNode(n)
-		nodeEntity := LoadNodeEntity(&n)
-		UpdateResourceInfo(&nodeEntity, pods)
-		err := nts.UpsertNode(&nodeEntity)
-		if err != nil {
-			logger.Error("Upsert node error:", err)
-		}
-	}
+	go nts.StartPrune(nodeEvent)
+	go nts.ResourceUpdater(nodeEvent)
 	return signal
 }
 
@@ -198,6 +175,7 @@ func UpdateResourceInfo(node *entity.Node, pods []corev1.Pod) {
 }
 
 func (nts *NodeSync) UpsertNode(node *entity.Node) error {
+	logger.Infof("%+v", node)
 	update := bson.M{"$set": node}
 	q := bson.M{"name": node.Name}
 	_, err := nts.context.C(entity.NodeCollectionName).Upsert(q, update)
@@ -218,11 +196,11 @@ func (nts *NodeSync) FetchNodes() []corev1.Node {
 	return nodes
 }
 
-func (nts *NodeSync) FetchPodsByNode(no corev1.Node) []corev1.Pod {
+func (nts *NodeSync) FetchPodsByNode(name string) []corev1.Pod {
 	var pods []corev1.Pod
 	podList, _ := kubemon.GetPods(nts.clientset, corev1.NamespaceAll)
 	for _, po := range podList.Items {
-		if po.Status.Phase == "Running" && po.Spec.NodeName == no.GetName() {
+		if (po.Status.Phase == "Pending" || po.Status.Phase == "Running") && po.Spec.NodeName == name {
 			pods = append(pods, po)
 		}
 	}
@@ -254,22 +232,27 @@ func (nts *NodeSync) Prune() error {
 	return nil
 }
 
-func (nts *NodeSync) StartPrune() {
+func (nts *NodeSync) StartPrune(nodeEvent chan entity.Node) {
 	logger.Infof("Node information prune periodic time is set to %d minutes", nts.t)
 	ticker := time.NewTicker(time.Duration(nts.t) * time.Minute)
-	logger.Info("[Polling] start pruning nodes...")
 	for {
 		select {
 		case <-ticker.C:
 			nts.Prune()
+		case ne := <-nodeEvent:
+			logger.Info("Receive a delete event")
+			err := nts.RemoveNodeByName(ne.Name)
+			if err != nil {
+				logger.Error("Remove node error:", err)
+			}
+
 		}
 	}
 }
 
-func (nts *NodeSync) StartUpdatePodResource() {
+func (nts *NodeSync) ResourceUpdater(nodeEvent chan entity.Node) {
 	logger.Infof("Pod resource update periodic time is set to %d minutes", nts.t)
 	ticker := time.NewTicker(time.Duration(nts.t) * time.Minute)
-	logger.Info("[Polling] start updating pod resources...")
 	for {
 		select {
 		case <-ticker.C:
@@ -277,7 +260,7 @@ func (nts *NodeSync) StartUpdatePodResource() {
 			nodes := nts.FetchNodes()
 			logger.Infof("found %d nodes", len(nodes))
 			for _, n := range nodes {
-				pods := nts.FetchPodsByNode(n)
+				pods := nts.FetchPodsByNode(n.Name)
 				nodeEntity := LoadNodeEntity(&n)
 				UpdateResourceInfo(&nodeEntity, pods)
 				err := nts.UpsertNode(&nodeEntity)
@@ -285,6 +268,15 @@ func (nts *NodeSync) StartUpdatePodResource() {
 					logger.Error("Upsert node error:", err)
 				}
 			}
+		case ne := <-nodeEvent:
+			logger.Info("Receive an add/update event")
+			pods := nts.FetchPodsByNode(ne.Name)
+			UpdateResourceInfo(&ne, pods)
+			err := nts.UpsertNode(&ne)
+			if err != nil {
+				logger.Error("Upsert node error:", err)
+			}
+
 		}
 	}
 }
