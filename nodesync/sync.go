@@ -27,7 +27,7 @@ type NodeStats struct {
 
 type NodeSync struct {
 	clientset *kubernetes.Clientset
-	context   *mongo.Context
+	context   *mongo.Session
 	stop      chan struct{}
 	stats     NodeStats
 	t         int
