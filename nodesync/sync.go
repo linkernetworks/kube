@@ -37,7 +37,7 @@ func New(clientset *kubernetes.Clientset, m *mongo.MongoService) *NodeSync {
 	stop := make(chan struct{})
 	var stats NodeStats
 	t, _ := strconv.Atoi(os.Getenv("NODE_RESOURCE_PERIODIC"))
-	return &NodeSync{clientset, m.NewContext(), stop, stats, t}
+	return &NodeSync{clientset, m.NewSession(), stop, stats, t}
 }
 
 type Signal chan bool
