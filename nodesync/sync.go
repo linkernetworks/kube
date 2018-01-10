@@ -159,7 +159,7 @@ func UpdateResourceInfo(node *entity.Node, pods []corev1.Pod) {
 
 			totalLimCPU += c.Resources.Limits.Cpu().MilliValue()
 			totalLimMem += c.Resources.Limits.Memory().Value()
-			totalLimGPU += GetNvidiaGPU(&c.Resources.Limits)Value()
+			totalLimGPU += GetNvidiaGPU(&c.Resources.Limits).Value()
 			totalLimPod += c.Resources.Limits.Pods().Value()
 		}
 	}
