@@ -175,7 +175,6 @@ func UpdateResourceInfo(node *entity.Node, pods []corev1.Pod) {
 }
 
 func (nts *NodeSync) UpsertNode(node *entity.Node) error {
-	logger.Infof("%+v", node)
 	update := bson.M{"$set": node}
 	q := bson.M{"name": node.Name}
 	_, err := nts.context.C(entity.NodeCollectionName).Upsert(q, update)
