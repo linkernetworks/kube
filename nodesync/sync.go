@@ -154,13 +154,13 @@ func UpdateResourceInfo(node *entity.Node, pods []corev1.Pod) {
 		for _, c := range p.Spec.Containers {
 			totalReqCPU += c.Resources.Requests.Cpu().MilliValue()
 			totalReqMem += c.Resources.Requests.Memory().Value()
-			totalReqGPU += GetNvidiaGPU(&c.Resources.Requests).MilliValue()
+			totalReqGPU += GetNvidiaGPU(&c.Resources.Requests).Value()
 			totalReqPod += c.Resources.Requests.Pods().Value()
 
 			totalLimCPU += c.Resources.Limits.Cpu().MilliValue()
 			totalLimMem += c.Resources.Limits.Memory().Value()
-			totalLimGPU += GetNvidiaGPU(&c.Resources.Limits).MilliValue()
-			totalLimPod += c.Resources.Limits.Pods().MilliValue()
+			totalLimGPU += GetNvidiaGPU(&c.Resources.Limits)Value()
+			totalLimPod += c.Resources.Limits.Pods().Value()
 		}
 	}
 	node.Requests.CPU = totalReqCPU
