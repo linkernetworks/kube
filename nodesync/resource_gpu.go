@@ -10,11 +10,11 @@ const DevicePluginNvidiaGPU corev1.ResourceName = "nvidia.com/gpu"
 
 func GetNvidiaGPU(r *corev1.ResourceList) *resource.Quantity {
 	if val, ok := (*r)[corev1.ResourceNvidiaGPU]; ok {
-		log.Printf("Use default resource name: %s\n", corev1.ResourceNvidiaGPU)
+		log.Printf("default GPU resource: %s\n", corev1.ResourceNvidiaGPU)
 		return &val
 	}
 	if val, ok := (*r)[DevicePluginNvidiaGPU]; ok {
-		log.Println("Use Nvidia device plugin resource name: %s\n", DevicePluginNvidiaGPU)
+		log.Printf("Nvidia device plugin resource: %s\n", DevicePluginNvidiaGPU)
 		return &val
 	}
 	return &resource.Quantity{}
