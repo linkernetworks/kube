@@ -3,6 +3,7 @@ package nodesync
 import (
 	"bitbucket.org/linkernetworks/aurora/src/entity"
 	"bitbucket.org/linkernetworks/aurora/src/kubemon"
+	"bitbucket.org/linkernetworks/aurora/src/kubernetes/nvidia"
 	"bitbucket.org/linkernetworks/aurora/src/logger"
 	"bitbucket.org/linkernetworks/aurora/src/service/mongo"
 	"gopkg.in/mgo.v2/bson"
@@ -116,13 +117,13 @@ func LoadNodeEntity(no *corev1.Node) entity.Node {
 			CPU:       no.Status.Allocatable.Cpu().MilliValue(),
 			Memory:    no.Status.Allocatable.Memory().Value(),
 			POD:       no.Status.Allocatable.Pods().Value(),
-			NvidiaGPU: GetNvidiaGPU(&no.Status.Allocatable).Value(),
+			NvidiaGPU: nvidia.GetGPU(&no.Status.Allocatable).Value(),
 		},
 		Capacity: entity.Capacity{
 			CPU:       no.Status.Capacity.Cpu().MilliValue(),
 			Memory:    no.Status.Capacity.Memory().Value(),
 			POD:       no.Status.Capacity.Pods().Value(),
-			NvidiaGPU: GetNvidiaGPU(&no.Status.Capacity).Value(),
+			NvidiaGPU: nvidia.GetGPU(&no.Status.Capacity).Value(),
 		},
 		NodeInfo: entity.NodeSystemInfo{
 			MachineID:               no.Status.NodeInfo.MachineID,
@@ -154,12 +155,12 @@ func UpdateResourceInfo(node *entity.Node, pods []corev1.Pod) {
 		for _, c := range p.Spec.Containers {
 			totalReqCPU += c.Resources.Requests.Cpu().MilliValue()
 			totalReqMem += c.Resources.Requests.Memory().Value()
-			totalReqGPU += GetNvidiaGPU(&c.Resources.Requests).Value()
+			totalReqGPU += nvidia.GetGPU(&c.Resources.Requests).Value()
 			totalReqPod += c.Resources.Requests.Pods().Value()
 
 			totalLimCPU += c.Resources.Limits.Cpu().MilliValue()
 			totalLimMem += c.Resources.Limits.Memory().Value()
-			totalLimGPU += GetNvidiaGPU(&c.Resources.Limits).Value()
+			totalLimGPU += nvidia.GetGPU(&c.Resources.Limits).Value()
 			totalLimPod += c.Resources.Limits.Pods().Value()
 		}
 	}

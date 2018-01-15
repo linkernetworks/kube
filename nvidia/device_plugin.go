@@ -1,4 +1,4 @@
-package nodesync
+package nvidia
 
 import (
 	corev1 "k8s.io/api/core/v1"
@@ -8,7 +8,7 @@ import (
 
 const DevicePluginNvidiaGPU corev1.ResourceName = "nvidia.com/gpu"
 
-func GetNvidiaGPU(r *corev1.ResourceList) *resource.Quantity {
+func GetGPU(r *corev1.ResourceList) *resource.Quantity {
 	if val, ok := (*r)[corev1.ResourceNvidiaGPU]; ok {
 		log.Printf("default GPU resource: %s\n", corev1.ResourceNvidiaGPU)
 		return &val
