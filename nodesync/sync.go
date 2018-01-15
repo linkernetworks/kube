@@ -42,10 +42,12 @@ func New(clientset *kubernetes.Clientset, m *mongo.Service) *NodeSync {
 }
 
 type Signal chan bool
+type NodeCh chan entity.Node
 
 func (nts *NodeSync) Sync() Signal {
 	signal := make(Signal, 1)
-	nodeEvent := make(chan entity.Node)
+	nodeChDelete := make(NodeCh, 1)
+	nodeChUpdate := make(NodeCh, 1)
 
 	// cleanup old node record
 	logger.Info("cleaning old record")
@@ -61,7 +63,7 @@ func (nts *NodeSync) Sync() Signal {
 			nodeEntity := LoadNodeEntity(n)
 			logger.Info("[Event] nodes state added")
 
-			nodeEvent <- nodeEntity
+			nodeChUpdate <- nodeEntity
 			select {
 			case signal <- true:
 			}
@@ -73,7 +75,7 @@ func (nts *NodeSync) Sync() Signal {
 			nodeEntity := LoadNodeEntity(n)
 			logger.Info("[Event] nodes state deleted")
 
-			nodeEvent <- nodeEntity
+			nodeChDelete <- nodeEntity
 			select {
 			case signal <- true:
 			}
@@ -85,15 +87,15 @@ func (nts *NodeSync) Sync() Signal {
 			nodeEntity := LoadNodeEntity(n)
 			logger.Info("[Event] nodes state updated")
 
-			nodeEvent <- nodeEntity
+			nodeChUpdate <- nodeEntity
 			select {
 			case signal <- true:
 			}
 		},
 	})
 	go controller.Run(nts.stop)
-	go nts.StartPrune(nodeEvent)
-	go nts.ResourceUpdater(nodeEvent)
+	go nts.StartPrune(nodeChDelete)
+	go nts.ResourceUpdater(nodeChUpdate)
 	return signal
 }
 
@@ -232,14 +234,14 @@ func (nts *NodeSync) Prune() error {
 	return nil
 }
 
-func (nts *NodeSync) StartPrune(nodeEvent chan entity.Node) {
+func (nts *NodeSync) StartPrune(nodeChDelete NodeCh) {
 	logger.Infof("Node information prune periodic time is set to %d minutes", nts.t)
 	ticker := time.NewTicker(time.Duration(nts.t) * time.Minute)
 	for {
 		select {
 		case <-ticker.C:
 			nts.Prune()
-		case ne := <-nodeEvent:
+		case ne := <-nodeChDelete:
 			logger.Info("Receive a delete event")
 			err := nts.RemoveNodeByName(ne.Name)
 			if err != nil {
@@ -250,7 +252,7 @@ func (nts *NodeSync) StartPrune(nodeEvent chan entity.Node) {
 	}
 }
 
-func (nts *NodeSync) ResourceUpdater(nodeEvent chan entity.Node) {
+func (nts *NodeSync) ResourceUpdater(nodeChUpdate NodeCh) {
 	logger.Infof("Pod resource update periodic time is set to %d minutes", nts.t)
 	ticker := time.NewTicker(time.Duration(nts.t) * time.Minute)
 	for {
@@ -268,8 +270,8 @@ func (nts *NodeSync) ResourceUpdater(nodeEvent chan entity.Node) {
 					logger.Error("Upsert node error:", err)
 				}
 			}
-		case ne := <-nodeEvent:
-			logger.Info("Receive an add/update event")
+		case ne := <-nodeChUpdate:
+			logger.Info("Receive a node add/update event")
 			pods := nts.FetchPodsByNode(ne.Name)
 			UpdateResourceInfo(&ne, pods)
 			err := nts.UpsertNode(&ne)
