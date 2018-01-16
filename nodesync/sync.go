@@ -30,24 +30,24 @@ type NodeCh chan entity.Node
 type Signal chan bool
 
 type NodeSync struct {
-	clientset    *kubernetes.Clientset
-	context      *mongo.Session
-	nodeChUpdate NodeCh
-	nodeChDelete NodeCh
-	stop         chan struct{}
-	signal       Signal
-	stats        NodeStats
-	t            int
+	clientset *kubernetes.Clientset
+	context   *mongo.Session
+	updateC   NodeCh
+	deleteC   NodeCh
+	stop      chan struct{}
+	signal    Signal
+	stats     NodeStats
+	t         int
 }
 
 func New(clientset *kubernetes.Clientset, m *mongo.Service) *NodeSync {
 	stop := make(chan struct{})
 	signal := make(Signal, 1)
-	nodeChDelete := make(NodeCh, 1)
-	nodeChUpdate := make(NodeCh, 1)
+	deleteC := make(NodeCh, 1)
+	updateC := make(NodeCh, 1)
 	var stats NodeStats
 	t, _ := strconv.Atoi(os.Getenv("NODE_RESOURCE_PERIODIC"))
-	return &NodeSync{clientset, m.NewSession(), nodeChUpdate, nodeChDelete, stop, signal, stats, t}
+	return &NodeSync{clientset, m.NewSession(), updateC, deleteC, stop, signal, stats, t}
 }
 
 func (nts *NodeSync) Sync() Signal {
@@ -65,7 +65,7 @@ func (nts *NodeSync) Sync() Signal {
 			nodeEntity := LoadNodeEntity(n)
 			logger.Info("[Event] nodes state added")
 
-			nts.nodeChUpdate <- nodeEntity
+			nts.updateC <- nodeEntity
 			select {
 			case nts.signal <- true:
 			}
@@ -77,7 +77,7 @@ func (nts *NodeSync) Sync() Signal {
 			nodeEntity := LoadNodeEntity(n)
 			logger.Info("[Event] nodes state deleted")
 
-			nts.nodeChDelete <- nodeEntity
+			nts.deleteC <- nodeEntity
 			select {
 			case nts.signal <- true:
 			}
@@ -89,7 +89,7 @@ func (nts *NodeSync) Sync() Signal {
 			nodeEntity := LoadNodeEntity(n)
 			logger.Info("[Event] nodes state updated")
 
-			nts.nodeChUpdate <- nodeEntity
+			nts.updateC <- nodeEntity
 			select {
 			case nts.signal <- true:
 			}
@@ -245,7 +245,7 @@ func (nts *NodeSync) StartPrune() {
 		select {
 		case <-ticker.C:
 			nts.Prune()
-		case ne := <-nts.nodeChDelete:
+		case ne := <-nts.deleteC:
 			logger.Info("Receive a delete event")
 			err := nts.RemoveNodeByName(ne.Name)
 			if err != nil {
@@ -274,7 +274,7 @@ func (nts *NodeSync) ResourceUpdater() {
 					logger.Error("Upsert node error:", err)
 				}
 			}
-		case ne := <-nts.nodeChUpdate:
+		case ne := <-nts.updateC:
 			logger.Info("Receive a node add/update event")
 			pods := nts.FetchPodsByNode(ne.Name)
 			UpdateResourceInfo(&ne, pods)
