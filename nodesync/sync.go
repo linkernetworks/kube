@@ -26,29 +26,31 @@ type NodeStats struct {
 	Deleted int
 }
 
+type NodeCh chan entity.Node
+type Signal chan bool
+
 type NodeSync struct {
-	clientset *kubernetes.Clientset
-	context   *mongo.Session
-	stop      chan struct{}
-	stats     NodeStats
-	t         int
+	clientset    *kubernetes.Clientset
+	context      *mongo.Session
+	nodeChUpdate NodeCh
+	nodeChDelete NodeCh
+	stop         chan struct{}
+	signal       Signal
+	stats        NodeStats
+	t            int
 }
 
 func New(clientset *kubernetes.Clientset, m *mongo.Service) *NodeSync {
 	stop := make(chan struct{})
-	var stats NodeStats
-	t, _ := strconv.Atoi(os.Getenv("NODE_RESOURCE_PERIODIC"))
-	return &NodeSync{clientset, m.NewSession(), stop, stats, t}
-}
-
-type Signal chan bool
-type NodeCh chan entity.Node
-
-func (nts *NodeSync) Sync() Signal {
 	signal := make(Signal, 1)
 	nodeChDelete := make(NodeCh, 1)
 	nodeChUpdate := make(NodeCh, 1)
+	var stats NodeStats
+	t, _ := strconv.Atoi(os.Getenv("NODE_RESOURCE_PERIODIC"))
+	return &NodeSync{clientset, m.NewSession(), nodeChUpdate, nodeChDelete, stop, signal, stats, t}
+}
 
+func (nts *NodeSync) Sync() Signal {
 	// cleanup old node record
 	logger.Info("cleaning old record")
 	nts.Prune()
@@ -63,9 +65,9 @@ func (nts *NodeSync) Sync() Signal {
 			nodeEntity := LoadNodeEntity(n)
 			logger.Info("[Event] nodes state added")
 
-			nodeChUpdate <- nodeEntity
+			nts.nodeChUpdate <- nodeEntity
 			select {
-			case signal <- true:
+			case nts.signal <- true:
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
@@ -75,9 +77,9 @@ func (nts *NodeSync) Sync() Signal {
 			nodeEntity := LoadNodeEntity(n)
 			logger.Info("[Event] nodes state deleted")
 
-			nodeChDelete <- nodeEntity
+			nts.nodeChDelete <- nodeEntity
 			select {
-			case signal <- true:
+			case nts.signal <- true:
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
@@ -87,16 +89,16 @@ func (nts *NodeSync) Sync() Signal {
 			nodeEntity := LoadNodeEntity(n)
 			logger.Info("[Event] nodes state updated")
 
-			nodeChUpdate <- nodeEntity
+			nts.nodeChUpdate <- nodeEntity
 			select {
-			case signal <- true:
+			case nts.signal <- true:
 			}
 		},
 	})
 	go controller.Run(nts.stop)
-	go nts.StartPrune(nodeChDelete)
-	go nts.ResourceUpdater(nodeChUpdate)
-	return signal
+	go nts.StartPrune()
+	go nts.ResourceUpdater()
+	return nts.signal
 }
 
 func (nts *NodeSync) Wait() {
@@ -180,6 +182,8 @@ func UpdateResourceInfo(node *entity.Node, pods []corev1.Pod) {
 func (nts *NodeSync) UpsertNode(node *entity.Node) error {
 	update := bson.M{"$set": node}
 	q := bson.M{"name": node.Name}
+	// debug use showing log messages
+	// logger.Infof("%#v", node)
 	_, err := nts.context.C(entity.NodeCollectionName).Upsert(q, update)
 	return err
 }
@@ -234,14 +238,14 @@ func (nts *NodeSync) Prune() error {
 	return nil
 }
 
-func (nts *NodeSync) StartPrune(nodeChDelete NodeCh) {
+func (nts *NodeSync) StartPrune() {
 	logger.Infof("Node information prune periodic time is set to %d minutes", nts.t)
 	ticker := time.NewTicker(time.Duration(nts.t) * time.Minute)
 	for {
 		select {
 		case <-ticker.C:
 			nts.Prune()
-		case ne := <-nodeChDelete:
+		case ne := <-nts.nodeChDelete:
 			logger.Info("Receive a delete event")
 			err := nts.RemoveNodeByName(ne.Name)
 			if err != nil {
@@ -252,7 +256,7 @@ func (nts *NodeSync) StartPrune(nodeChDelete NodeCh) {
 	}
 }
 
-func (nts *NodeSync) ResourceUpdater(nodeChUpdate NodeCh) {
+func (nts *NodeSync) ResourceUpdater() {
 	logger.Infof("Pod resource update periodic time is set to %d minutes", nts.t)
 	ticker := time.NewTicker(time.Duration(nts.t) * time.Minute)
 	for {
@@ -270,7 +274,7 @@ func (nts *NodeSync) ResourceUpdater(nodeChUpdate NodeCh) {
 					logger.Error("Upsert node error:", err)
 				}
 			}
-		case ne := <-nodeChUpdate:
+		case ne := <-nts.nodeChUpdate:
 			logger.Info("Receive a node add/update event")
 			pods := nts.FetchPodsByNode(ne.Name)
 			UpdateResourceInfo(&ne, pods)
