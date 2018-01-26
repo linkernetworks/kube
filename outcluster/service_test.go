@@ -19,7 +19,7 @@ func TestConnectWith(t *testing.T) {
 		t.Skip("TEST_K8S is not set.")
 	}
 
-	cf := config.Read("../../../config/testing.json")
+	cf := config.MustRead("../../../config/testing.json")
 	ksvc := kubernetes.NewFromConfig(cf.Kubernetes)
 	clientset, err := ksvc.CreateClientset()
 	assert.NoError(t, err)
@@ -41,7 +41,7 @@ func TestAllocateNodePortServices(t *testing.T) {
 		t.Skip("TEST_K8S is not set.")
 	}
 
-	cf := config.Read("../../../config/testing.json")
+	cf := config.MustRead("../../../config/testing.json")
 	ksvc := kubernetes.NewFromConfig(cf.Kubernetes)
 	clientset, err := ksvc.CreateClientset()
 	assert.NoError(t, err)

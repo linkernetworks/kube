@@ -20,7 +20,7 @@ func TestNodeSync(t *testing.T) {
 	}
 	os.Setenv("NODE_RESOURCE_PERIODIC", "3")
 
-	cf := config.Read(testingConfigPath)
+	cf := config.MustRead(testingConfigPath)
 
 	ksvc := kubernetes.NewFromConfig(cf.Kubernetes)
 	clientset, err := ksvc.CreateClientset()
