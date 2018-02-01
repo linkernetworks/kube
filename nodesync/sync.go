@@ -209,7 +209,7 @@ func (nts *NodeSync) ResourceUpdater() {
 			nodes := nts.FetchNodes()
 			logger.Infof("found %d nodes", len(nodes))
 			for _, n := range nodes {
-				pods := nts.dt.FetchPodsByNode(n.Name)
+				pods := nts.dt.FetchActivePodsByNode(n.Name)
 				ne.LoadMeta(&n)
 				ne.LoadSystemInfo(n.Status.NodeInfo)
 				ne.LoadAllocatableResource(n.Status.Allocatable)
@@ -224,7 +224,7 @@ func (nts *NodeSync) ResourceUpdater() {
 			}
 		case ne := <-nts.updateC:
 			logger.Info("Receive a node add/update event")
-			pods := nts.dt.FetchPodsByNode(ne.Name)
+			pods := nts.dt.FetchActivePodsByNode(ne.Name)
 
 			ne.UpdatePodsLimitResource(pods)
 			ne.UpdatePodsRequestResource(pods)
