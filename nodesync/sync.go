@@ -1,6 +1,7 @@
 package nodesync
 
 import (
+	dt "bitbucket.org/linkernetworks/aurora/src/deployment"
 	"bitbucket.org/linkernetworks/aurora/src/entity"
 	"bitbucket.org/linkernetworks/aurora/src/kubernetes/kubemon"
 	"bitbucket.org/linkernetworks/aurora/src/kubernetes/nvidia"
@@ -59,10 +60,10 @@ func (nts *NodeSync) Sync() Signal {
 	// keep watch node change events
 	_, controller := kubemon.WatchNodes(nts.clientset, fields.Everything(), cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			n := obj.(*corev1.Node)
+			n := obj.(corev1.Node)
 			nts.stats.Added++
 
-			nodeEntity := LoadNodeEntity(n)
+			nodeEntity := dt.LoadNodeEntity(n)
 			logger.Info("[Event] nodes state added")
 
 			nts.updateC <- nodeEntity
@@ -71,10 +72,10 @@ func (nts *NodeSync) Sync() Signal {
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			n := obj.(*corev1.Node)
+			n := obj.(corev1.Node)
 			nts.stats.Deleted++
 
-			nodeEntity := LoadNodeEntity(n)
+			nodeEntity := dt.LoadNodeEntity(n)
 			logger.Info("[Event] nodes state deleted")
 
 			nts.deleteC <- nodeEntity
@@ -83,10 +84,10 @@ func (nts *NodeSync) Sync() Signal {
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			n := newObj.(*corev1.Node)
+			n := newObj.(corev1.Node)
 			nts.stats.Updated++
 
-			nodeEntity := LoadNodeEntity(n)
+			nodeEntity := dt.LoadNodeEntity(n)
 			logger.Info("[Event] nodes state updated")
 
 			nts.updateC <- nodeEntity
@@ -109,47 +110,6 @@ func (nts *NodeSync) Stop() {
 	defer nts.context.Close()
 	var e struct{}
 	nts.stop <- e
-}
-
-func LoadNodeEntity(no *corev1.Node) entity.Node {
-	node := entity.Node{
-		Name:              no.GetName(),
-		ClusterName:       no.GetClusterName(),
-		CreationTimestamp: no.GetCreationTimestamp().Time,
-		Labels:            createLabelSlice(no.GetLabels()),
-		Allocatable: entity.Allocatable{
-			CPU:       no.Status.Allocatable.Cpu().MilliValue(),
-			Memory:    no.Status.Allocatable.Memory().Value(),
-			POD:       no.Status.Allocatable.Pods().Value(),
-			NvidiaGPU: nvidia.GetGPU(&no.Status.Allocatable).Value(),
-		},
-		Capacity: entity.Capacity{
-			CPU:       no.Status.Capacity.Cpu().MilliValue(),
-			Memory:    no.Status.Capacity.Memory().Value(),
-			POD:       no.Status.Capacity.Pods().Value(),
-			NvidiaGPU: nvidia.GetGPU(&no.Status.Capacity).Value(),
-		},
-		NodeInfo: entity.NodeSystemInfo{
-			MachineID:               no.Status.NodeInfo.MachineID,
-			KernelVersion:           no.Status.NodeInfo.KernelVersion,
-			OSImage:                 no.Status.NodeInfo.OSImage,
-			ContainerRuntimeVersion: no.Status.NodeInfo.ContainerRuntimeVersion,
-			KubeletVersion:          no.Status.NodeInfo.KubeletVersion,
-			OperatingSystem:         no.Status.NodeInfo.OperatingSystem,
-			Architecture:            no.Status.NodeInfo.Architecture,
-		},
-	}
-	for _, addr := range no.Status.Addresses {
-		switch addr.Type {
-		case "InternalIP":
-			node.InternalIP = addr.Address
-		case "ExternalIP":
-			node.ExternalIP = addr.Address
-		case "Hostname":
-			node.Hostname = addr.Address
-		}
-	}
-	return node
 }
 
 func UpdateResourceInfo(node *entity.Node, pods []corev1.Pod) {
@@ -267,7 +227,7 @@ func (nts *NodeSync) ResourceUpdater() {
 			logger.Infof("found %d nodes", len(nodes))
 			for _, n := range nodes {
 				pods := nts.FetchPodsByNode(n.Name)
-				nodeEntity := LoadNodeEntity(&n)
+				nodeEntity := dt.LoadNodeEntity(n)
 				UpdateResourceInfo(&nodeEntity, pods)
 				err := nts.UpsertNode(&nodeEntity)
 				if err != nil {
