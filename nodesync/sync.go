@@ -1,8 +1,8 @@
 package nodesync
 
 import (
-	dt "bitbucket.org/linkernetworks/aurora/src/deployment"
 	"bitbucket.org/linkernetworks/aurora/src/entity"
+	"bitbucket.org/linkernetworks/aurora/src/kubemon"
 	"bitbucket.org/linkernetworks/aurora/src/kubernetes/kubemon"
 	"bitbucket.org/linkernetworks/aurora/src/kubernetes/nvidia"
 	"bitbucket.org/linkernetworks/aurora/src/logger"
@@ -42,16 +42,22 @@ type NodeSync struct {
 }
 
 func New(clientset *kubernetes.Clientset, m *mongo.Service) *NodeSync {
-	stop := make(chan struct{})
-	signal := make(Signal, 1)
-	deleteC := make(NodeCh, 1)
-	updateC := make(NodeCh, 1)
 	var stats NodeStats
 	t, _ := strconv.Atoi(os.Getenv("NODE_RESOURCE_PERIODIC"))
-	return &NodeSync{clientset, m.NewSession(), updateC, deleteC, stop, signal, stats, t}
+	return &NodeSync{
+		clientset: clientset,
+		context:   m.NewSession(),
+		updateC:   make(NodeCh, 1),
+		deleteC:   make(NodeCh, 1),
+		stop:      make(chan struct{}),
+		signal:    make(Signal, 1),
+		stats:     stats,
+		t:         t,
+	}
 }
 
 func (nts *NodeSync) Sync() Signal {
+	ne := entity.Node{}
 	// cleanup old node record
 	logger.Info("cleaning old record")
 	nts.Prune()
@@ -60,37 +66,45 @@ func (nts *NodeSync) Sync() Signal {
 	// keep watch node change events
 	_, controller := kubemon.WatchNodes(nts.clientset, fields.Everything(), cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			n := obj.(corev1.Node)
+			n := obj.(*corev1.Node)
 			nts.stats.Added++
 
-			nodeEntity := dt.LoadNodeEntity(n)
+			ne.LoadMeta(n)
+			ne.LoadSystemInfo(n.Status.NodeInfo)
+			ne.LoadAllocatableResource(n.Status.Allocatable)
+			ne.LoadCapacityResource(n.Status.Capacity)
+
 			logger.Info("[Event] nodes state added")
 
-			nts.updateC <- nodeEntity
+			nts.updateC <- ne
 			select {
 			case nts.signal <- true:
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			n := obj.(corev1.Node)
+			n := obj.(*corev1.Node)
 			nts.stats.Deleted++
 
-			nodeEntity := dt.LoadNodeEntity(n)
+			ne.LoadMeta(n)
 			logger.Info("[Event] nodes state deleted")
 
-			nts.deleteC <- nodeEntity
+			nts.deleteC <- ne
 			select {
 			case nts.signal <- true:
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			n := newObj.(corev1.Node)
+			n := newObj.(*corev1.Node)
 			nts.stats.Updated++
 
-			nodeEntity := dt.LoadNodeEntity(n)
+			ne.LoadMeta(n)
+			ne.LoadSystemInfo(n.Status.NodeInfo)
+			ne.LoadAllocatableResource(n.Status.Allocatable)
+			ne.LoadCapacityResource(n.Status.Capacity)
+
 			logger.Info("[Event] nodes state updated")
 
-			nts.updateC <- nodeEntity
+			nts.updateC <- ne
 			select {
 			case nts.signal <- true:
 			}
@@ -107,43 +121,15 @@ func (nts *NodeSync) Wait() {
 }
 
 func (nts *NodeSync) Stop() {
-	defer nts.context.Close()
 	var e struct{}
 	nts.stop <- e
-}
-
-func UpdateResourceInfo(node *entity.Node, pods []corev1.Pod) {
-	var totalReqCPU, totalReqMem, totalReqGPU, totalReqPod int64
-	var totalLimCPU, totalLimMem, totalLimGPU, totalLimPod int64
-	for _, p := range pods {
-		for _, c := range p.Spec.Containers {
-			totalReqCPU += c.Resources.Requests.Cpu().MilliValue()
-			totalReqMem += c.Resources.Requests.Memory().Value()
-			totalReqGPU += nvidia.GetGPU(&c.Resources.Requests).Value()
-			totalReqPod += c.Resources.Requests.Pods().Value()
-
-			totalLimCPU += c.Resources.Limits.Cpu().MilliValue()
-			totalLimMem += c.Resources.Limits.Memory().Value()
-			totalLimGPU += nvidia.GetGPU(&c.Resources.Limits).Value()
-			totalLimPod += c.Resources.Limits.Pods().Value()
-		}
-	}
-	node.Requests.CPU = totalReqCPU
-	node.Requests.Memory = totalReqMem
-	node.Requests.NvidiaGPU = totalReqGPU
-	node.Requests.POD = totalReqPod
-
-	node.Limits.CPU = totalLimCPU
-	node.Limits.Memory = totalLimMem
-	node.Limits.NvidiaGPU = totalLimGPU
-	node.Limits.POD = totalLimPod
 }
 
 func (nts *NodeSync) UpsertNode(node *entity.Node) error {
 	update := bson.M{"$set": node}
 	q := bson.M{"name": node.Name}
 	// debug use showing log messages
-	// logger.Infof("%#v", node)
+	logger.Infof("%#v", node)
 	_, err := nts.context.C(entity.NodeCollectionName).Upsert(q, update)
 	return err
 }
@@ -222,14 +208,21 @@ func (nts *NodeSync) ResourceUpdater() {
 	for {
 		select {
 		case <-ticker.C:
+			ne := entity.Node{}
 			logger.Info("fetching all nodes")
 			nodes := nts.FetchNodes()
 			logger.Infof("found %d nodes", len(nodes))
 			for _, n := range nodes {
 				pods := nts.FetchPodsByNode(n.Name)
-				nodeEntity := dt.LoadNodeEntity(n)
-				UpdateResourceInfo(&nodeEntity, pods)
-				err := nts.UpsertNode(&nodeEntity)
+
+				ne.LoadMeta(&n)
+				ne.LoadSystemInfo(n.Status.NodeInfo)
+				ne.LoadAllocatableResource(n.Status.Allocatable)
+				ne.LoadCapacityResource(n.Status.Capacity)
+				ne.UpdatePodsLimitResource(pods)
+				ne.UpdatePodsRequestResource(pods)
+
+				err := nts.UpsertNode(&ne)
 				if err != nil {
 					logger.Error("Upsert node error:", err)
 				}
@@ -237,7 +230,10 @@ func (nts *NodeSync) ResourceUpdater() {
 		case ne := <-nts.updateC:
 			logger.Info("Receive a node add/update event")
 			pods := nts.FetchPodsByNode(ne.Name)
-			UpdateResourceInfo(&ne, pods)
+
+			ne.UpdatePodsLimitResource(pods)
+			ne.UpdatePodsRequestResource(pods)
+
 			err := nts.UpsertNode(&ne)
 			if err != nil {
 				logger.Error("Upsert node error:", err)
@@ -245,15 +241,6 @@ func (nts *NodeSync) ResourceUpdater() {
 
 		}
 	}
-}
-
-func createLabelSlice(m map[string]string) []string {
-	s := make([]string, 0, len(m))
-	for k, v := range m {
-		l := k + "=" + v
-		s = append(s, l)
-	}
-	return s
 }
 
 func nodeInCluster(n string, list []string) bool {

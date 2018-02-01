@@ -68,3 +68,51 @@ func TestNodeInCluster(t *testing.T) {
 	assert.False(t, b)
 
 }
+
+func TestFetchNodes(t *testing.T) {
+	if _, ok := os.LookupEnv("TEST_K8S"); !ok {
+		t.Skip("Skip kubernetes related tests")
+		return
+	}
+	os.Setenv("NODE_RESOURCE_PERIODIC", "3")
+
+	cf := config.MustRead(testingConfigPath)
+
+	ksvc := kubernetes.NewFromConfig(cf.Kubernetes)
+	clientset, err := ksvc.CreateClientset()
+	assert.NoError(t, err)
+
+	ms := mongo.New(cf.Mongo.Url)
+	assert.NotNil(t, ms)
+
+	nts := New(clientset, ms)
+	assert.NotNil(t, nts)
+
+	nodes := nts.FetchNodes()
+	assert.NotEmpty(t, nodes)
+}
+
+func TestFetchPodsByNode(t *testing.T) {
+	if _, ok := os.LookupEnv("TEST_K8S"); !ok {
+		t.Skip("Skip kubernetes related tests")
+		return
+	}
+	os.Setenv("NODE_RESOURCE_PERIODIC", "3")
+
+	cf := config.MustRead(testingConfigPath)
+
+	ksvc := kubernetes.NewFromConfig(cf.Kubernetes)
+	clientset, err := ksvc.CreateClientset()
+	assert.NoError(t, err)
+
+	ms := mongo.New(cf.Mongo.Url)
+	assert.NotNil(t, ms)
+
+	nts := New(clientset, ms)
+	assert.NotNil(t, nts)
+
+	nodes := nts.FetchNodes()
+
+	pods := nts.FetchPodsByNode(nodes[0].Name)
+	assert.NotEmpty(t, pods)
+}
