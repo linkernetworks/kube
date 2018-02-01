@@ -17,9 +17,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"time"
-
-	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
 type NodeStats struct {
@@ -28,7 +25,7 @@ type NodeStats struct {
 	Deleted int
 }
 
-type NodeCh chan entity.Node
+type NodeCh chan *entity.Node
 type Signal chan bool
 
 type NodeSync struct {
@@ -50,8 +47,8 @@ func New(clientset *kubernetes.Clientset, m *mongo.Service, dt *deployment.KubeD
 		clientset: clientset,
 		context:   m.NewSession(),
 		dt:        dt,
-		updateC:   make(NodeCh, 1),
-		deleteC:   make(NodeCh, 1),
+		updateC:   make(NodeCh, 10),
+		deleteC:   make(NodeCh, 10),
 		stop:      make(chan struct{}),
 		signal:    make(Signal, 1),
 		stats:     stats,
@@ -60,7 +57,6 @@ func New(clientset *kubernetes.Clientset, m *mongo.Service, dt *deployment.KubeD
 }
 
 func (nts *NodeSync) Sync() Signal {
-	ne := entity.Node{}
 	// cleanup old node record
 	logger.Info("cleaning old record")
 	nts.Prune()
@@ -69,6 +65,7 @@ func (nts *NodeSync) Sync() Signal {
 	// keep watch node change events
 	_, controller := kubemon.WatchNodes(nts.clientset, fields.Everything(), cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
+			ne := &entity.Node{}
 			n := obj.(*corev1.Node)
 			nts.stats.Added++
 
@@ -77,7 +74,7 @@ func (nts *NodeSync) Sync() Signal {
 			ne.LoadAllocatableResource(n.Status.Allocatable)
 			ne.LoadCapacityResource(n.Status.Capacity)
 
-			logger.Info("[Event] nodes state added")
+			logger.Infof("[Event] node %s added", ne.Name)
 
 			nts.updateC <- ne
 			select {
@@ -88,15 +85,15 @@ func (nts *NodeSync) Sync() Signal {
 			n := obj.(*corev1.Node)
 			nts.stats.Deleted++
 
-			ne.LoadMeta(n)
-			logger.Info("[Event] nodes state deleted")
+			logger.Infof("[Event] node %s deleted", n.Name)
 
-			nts.deleteC <- ne
+			nts.deleteC <- &entity.Node{Name: n.Name}
 			select {
 			case nts.signal <- true:
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
+			ne := &entity.Node{}
 			n := newObj.(*corev1.Node)
 			nts.stats.Updated++
 
@@ -105,7 +102,7 @@ func (nts *NodeSync) Sync() Signal {
 			ne.LoadAllocatableResource(n.Status.Allocatable)
 			ne.LoadCapacityResource(n.Status.Capacity)
 
-			logger.Info("[Event] nodes state updated")
+			logger.Infof("[Event] node %s updated", ne.Name)
 
 			nts.updateC <- ne
 			select {
@@ -114,8 +111,8 @@ func (nts *NodeSync) Sync() Signal {
 		},
 	})
 	go controller.Run(nts.stop)
-	go nts.StartPrune()
-	go nts.ResourceUpdater()
+	go nts.NodeRoutine()
+	go nts.NodeEventHandler()
 	return nts.signal
 }
 
@@ -142,15 +139,6 @@ func (nts *NodeSync) RemoveNodeByName(name string) error {
 	return nts.context.C(entity.NodeCollectionName).Remove(q)
 }
 
-func (nts *NodeSync) FetchNodes() []corev1.Node {
-	var nodes []corev1.Node
-	nodeList, _ := kubemon.GetNodes(nts.clientset)
-	for _, no := range nodeList.Items {
-		nodes = append(nodes, no)
-	}
-	return nodes
-}
-
 func (nts *NodeSync) Prune() error {
 	var newNodeNames []string
 	var err error
@@ -169,69 +157,57 @@ func (nts *NodeSync) Prune() error {
 	// check mongodb record if node doesn't exist in current cluster than remove the record
 	for _, n := range nodes {
 		if !nodeInCluster(n.Name, newNodeNames) {
-			logger.Info("Pruning nodes...")
-			err := nts.context.C(entity.NodeCollectionName).Remove(bson.M{"name": n.Name})
-			if err != nil {
-				logger.Error("Pruning nodes error")
-				return err
-			}
+			logger.Info("Pruning node %s", n.Name)
+			nts.deleteC <- &entity.Node{Name: n.Name}
 		}
 	}
 	return nil
 }
 
-func (nts *NodeSync) StartPrune() {
-	logger.Infof("Node information prune periodic time is set to %d minutes", nts.t)
+func (nts *NodeSync) NodeRoutine() {
+	logger.Infof("Node routine periodic time is set to %d minutes", nts.t)
 	ticker := time.NewTicker(time.Duration(nts.t) * time.Minute)
 	for {
 		select {
 		case <-ticker.C:
+			// clean routine
 			nts.Prune()
-		case ne := <-nts.deleteC:
-			logger.Info("Receive a delete event")
-			err := nts.RemoveNodeByName(ne.Name)
+			// update routine
+			nodes, err := nts.dt.GetNodesResource()
+			logger.Infof("fetching all nodes. found %d nodes", len(nodes))
 			if err != nil {
-				logger.Error("Remove node error:", err)
+				logger.Errorf("Get nodes resources fail: %v", err)
+
+			}
+			for _, n := range nodes {
+				nts.updateC <- n
 			}
 
 		}
 	}
+
 }
 
-func (nts *NodeSync) ResourceUpdater() {
-	logger.Infof("Pod resource update periodic time is set to %d minutes", nts.t)
-	ticker := time.NewTicker(time.Duration(nts.t) * time.Minute)
+func (nts *NodeSync) NodeEventHandler() {
 	for {
 		select {
-		case <-ticker.C:
-			ne := entity.Node{}
-			logger.Info("fetching all nodes")
-			nodes := nts.FetchNodes()
-			logger.Infof("found %d nodes", len(nodes))
-			for _, n := range nodes {
-				pods := nts.dt.FetchActivePodsByNode(n.Name)
-				ne.LoadMeta(&n)
-				ne.LoadSystemInfo(n.Status.NodeInfo)
-				ne.LoadAllocatableResource(n.Status.Allocatable)
-				ne.LoadCapacityResource(n.Status.Capacity)
-				ne.UpdatePodsLimitResource(pods)
-				ne.UpdatePodsRequestResource(pods)
-
-				err := nts.UpsertNode(&ne)
-				if err != nil {
-					logger.Error("Upsert node error:", err)
-				}
-			}
 		case ne := <-nts.updateC:
-			logger.Info("Receive a node add/update event")
+			logger.Info("Receive a update event")
+			// fetch all active pods on a node
 			pods := nts.dt.FetchActivePodsByNode(ne.Name)
 
 			ne.UpdatePodsLimitResource(pods)
 			ne.UpdatePodsRequestResource(pods)
 
-			err := nts.UpsertNode(&ne)
+			err := nts.UpsertNode(ne)
 			if err != nil {
 				logger.Error("Upsert node error:", err)
+			}
+		case ne := <-nts.deleteC:
+			logger.Info("Receive a delete event")
+			err := nts.RemoveNodeByName(ne.Name)
+			if err != nil {
+				logger.Error("Remove node error:", err)
 			}
 
 		}
