@@ -1,6 +1,7 @@
 package nodesync
 
 import (
+	"bitbucket.org/linkernetworks/aurora/src/deployment"
 	"bitbucket.org/linkernetworks/aurora/src/entity"
 	"bitbucket.org/linkernetworks/aurora/src/kubemon"
 	"bitbucket.org/linkernetworks/aurora/src/kubernetes/kubemon"
@@ -33,6 +34,7 @@ type Signal chan bool
 type NodeSync struct {
 	clientset *kubernetes.Clientset
 	context   *mongo.Session
+	dt        *deployment.KubeDeploymentTarget
 	updateC   NodeCh
 	deleteC   NodeCh
 	stop      chan struct{}
@@ -41,12 +43,13 @@ type NodeSync struct {
 	t         int
 }
 
-func New(clientset *kubernetes.Clientset, m *mongo.Service) *NodeSync {
+func New(clientset *kubernetes.Clientset, m *mongo.Service, dt *deployment.KubeDeploymentTarget) *NodeSync {
 	var stats NodeStats
 	t, _ := strconv.Atoi(os.Getenv("NODE_RESOURCE_PERIODIC"))
 	return &NodeSync{
 		clientset: clientset,
 		context:   m.NewSession(),
+		dt:        dt,
 		updateC:   make(NodeCh, 1),
 		deleteC:   make(NodeCh, 1),
 		stop:      make(chan struct{}),
@@ -148,25 +151,18 @@ func (nts *NodeSync) FetchNodes() []corev1.Node {
 	return nodes
 }
 
-func (nts *NodeSync) FetchPodsByNode(name string) []corev1.Pod {
-	var pods []corev1.Pod
-	podList, _ := kubemon.GetPods(nts.clientset, corev1.NamespaceAll)
-	for _, po := range podList.Items {
-		if (po.Status.Phase == "Pending" || po.Status.Phase == "Running") && po.Spec.NodeName == name {
-			pods = append(pods, po)
-		}
-	}
-	return pods
-}
-
 func (nts *NodeSync) Prune() error {
 	var newNodeNames []string
-	nodesList := nts.FetchNodes()
+	var err error
+	nodesList, err := nts.dt.GetNodes()
+	if err != nil {
+		return err
+	}
 	for _, n := range nodesList {
 		newNodeNames = append(newNodeNames, n.Name)
 	}
 	nodes := []entity.Node{}
-	err := nts.context.C(entity.NodeCollectionName).Find(nil).Select(bson.M{"name": 1}).All(&nodes)
+	err = nts.context.C(entity.NodeCollectionName).Find(nil).Select(bson.M{"name": 1}).All(&nodes)
 	if err != nil {
 		return err
 	}
@@ -213,8 +209,7 @@ func (nts *NodeSync) ResourceUpdater() {
 			nodes := nts.FetchNodes()
 			logger.Infof("found %d nodes", len(nodes))
 			for _, n := range nodes {
-				pods := nts.FetchPodsByNode(n.Name)
-
+				pods := nts.dt.FetchPodsByNode(n.Name)
 				ne.LoadMeta(&n)
 				ne.LoadSystemInfo(n.Status.NodeInfo)
 				ne.LoadAllocatableResource(n.Status.Allocatable)
@@ -229,7 +224,7 @@ func (nts *NodeSync) ResourceUpdater() {
 			}
 		case ne := <-nts.updateC:
 			logger.Info("Receive a node add/update event")
-			pods := nts.FetchPodsByNode(ne.Name)
+			pods := nts.dt.FetchPodsByNode(ne.Name)
 
 			ne.UpdatePodsLimitResource(pods)
 			ne.UpdatePodsRequestResource(pods)
