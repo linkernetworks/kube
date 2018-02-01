@@ -29,7 +29,7 @@ func TestPodSubscriptionNewUpdateEvent(t *testing.T) {
 	message := "log message"
 	pEvent := subc.newUpdateEvent(message)
 	assert.Equal(t, "record.update", pEvent.Type)
-	assert.Equal(t, "pod.containerlogs", pEvent.ContainerLog.Document)
+	assert.Equal(t, "pod.container.logs", pEvent.ContainerLog.Document)
 	assert.Equal(t, "default", pEvent.ContainerLog.Target)
 	assert.Equal(t, "DPID", pEvent.ContainerLog.DeploymentId)
 	assert.Equal(t, "johnlin", pEvent.ContainerLog.ContainerName)
