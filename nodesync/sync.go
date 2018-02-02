@@ -43,8 +43,8 @@ type NodeSync struct {
 func New(clientset *kubernetes.Clientset, m *mongo.Service, dt *deployment.KubeDeploymentTarget) *NodeSync {
 	var stats NodeStats
 
-	t := ostrconv.Atoi(os.Getenv("NODE_RESOURCE_PERIODIC"))
-	if len(t) == 0 {
+	t, _ := strconv.Atoi(os.Getenv("NODE_RESOURCE_PERIODIC"))
+	if t == 0 {
 		t = 3
 	}
 
