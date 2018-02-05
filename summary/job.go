@@ -26,14 +26,14 @@ func QueryCurrentGpuUsageByUser(context *mongo.Session, uid bson.ObjectId) (JobG
 	for _, job := range jobs {
 		usage := JobGPUUsage{
 			Job:    &job,
-			NumGPU: GetNumGPUGpuFromJob(job),
+			NumGPU: GetNumGPUFromJob(job),
 		}
 		usageSummary = append(usageSummary, usage)
 	}
 	return usageSummary, nil
 }
 
-func GetNumGPUGpuFromJob(job entity.Job) int {
+func GetNumGPUFromJob(job entity.Job) int {
 	sum := 0
 	// all containers in a pod
 	for _, r := range job.Request.Training.Resources {
