@@ -22,7 +22,7 @@ func TestGetNumGPUFromPod(t *testing.T) {
 			},
 		},
 	}
-	num := GetNumGPUGpuFromJob(job)
+	num := GetNumGPUFromJob(job)
 	assert.Equal(t, 10, num)
 
 	jobWith2Containers := entity.Job{
@@ -44,6 +44,6 @@ func TestGetNumGPUFromPod(t *testing.T) {
 		},
 	}
 
-	num = GetNumGPUGpuFromJob(jobWith2Containers)
+	num = GetNumGPUFromJob(jobWith2Containers)
 	assert.Equal(t, 30, num)
 }
