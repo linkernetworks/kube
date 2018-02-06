@@ -39,53 +39,63 @@ func (k *Kudis) GetDeploymentTarget(target string) (dt deployment.DeploymentTarg
 	return dt, nil
 }
 
-func (k *Kudis) SubscribePod(ctx context.Context, req *pb.PodContainerLogRequest) (*pb.SubscriptionResponse, error) {
+func (k *Kudis) SubscribePodLogs(ctx context.Context, req *pb.PodContainerLogRequest) (*pb.SubscriptionResponse, error) {
 	target := req.GetTarget()
 	dt, err := k.GetDeploymentTarget(target)
-
 	if err != nil {
-		logrus.Errorln(err)
 		return &pb.SubscriptionResponse{
 			Success: false,
 			Reason:  err.Error(),
 		}, err
 	}
 
-	subscription := NewPodLogSubscription(
+	var subscription Subscription = NewPodLogSubscription(
 		k.redisService, target, dt,
 		req.GetPodName(),
 		req.GetContainerName(),
 		req.GetTailLines(),
 	)
-	topic := subscription.Topic()
 
-	// if the topic is already been subscribed then return subscribed
-	if prevsub, ok := k.subscriptions.LoadOrStore(topic, subscription); ok {
-		if prevsub.(Subscription).IsRunning() {
+	return k.Subscribe(subscription)
+}
+
+func (k *Kudis) Subscribe(subscription Subscription) (*pb.SubscriptionResponse, error) {
+	if prevsub, ok := k.LoadSubscription(subscription); ok {
+		if prevsub.IsRunning() {
 			return &pb.SubscriptionResponse{
 				Success: true,
 				Reason:  "The subscription is already running.",
 			}, nil
 		}
 
-		subscription, ok = prevsub.(*PodLogSubscription)
-		if !ok {
-			return &pb.SubscriptionResponse{
-				Success: false,
-				Reason:  "Failed to cast type to PodLogSubscription",
-			}, nil
-		}
+		// load the pod log subscription object so that we can restart it again
+		subscription = prevsub
 	}
 
-	logrus.Infof("Starting subscription: topic=%s", topic)
-	if err := subscription.Start(); err != nil {
+	if err := k.StartSubscription(subscription); err != nil {
 		return &pb.SubscriptionResponse{
 			Success: false,
 			Reason:  err.Error(),
 		}, err
 	}
-	k.subscriptions.Store(topic, subscription)
+
 	return &pb.SubscriptionResponse{Success: true}, nil
+}
+
+func (k *Kudis) LoadSubscription(subscription Subscription) (Subscription, bool) {
+	// if the topic is already been subscribed then return subscribed
+	val, ok := k.subscriptions.LoadOrStore(subscription.Topic(), subscription)
+	return val.(Subscription), ok
+}
+
+func (k *Kudis) StartSubscription(subscription Subscription) error {
+	var topic = subscription.Topic()
+	logrus.Infof("Starting subscription: topic=%s", topic)
+	if err := subscription.Start(); err != nil {
+		return err
+	}
+	k.subscriptions.Store(topic, subscription)
+	return nil
 }
 
 func (k *Kudis) Start(bind string) error {
