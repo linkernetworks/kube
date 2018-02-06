@@ -27,4 +27,7 @@ func TestServer(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, success)
 	t.Logf("reason: %s", reason)
+
+	err = subscription.Stop()
+	assert.NoError(t, err)
 }

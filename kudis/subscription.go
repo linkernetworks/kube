@@ -5,5 +5,6 @@ type Subscription interface {
 	NumSubscribers() (int, error)
 
 	Start() error
+	Stop() error
 	IsRunning() bool
 }
