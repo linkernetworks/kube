@@ -38,15 +38,6 @@ func (s *PodEventSubscription) IsRunning() bool {
 	return s.running
 }
 
-func (p *PodEventSubscription) NumSubscribers() (int, error) {
-	topic := p.Topic()
-	nums, err := p.redis.GetNumSub(topic)
-	if err != nil {
-		return -1, err
-	}
-	return nums[topic], nil
-}
-
 func (s *PodEventSubscription) Stop() error {
 	s.stop <- true
 	return nil

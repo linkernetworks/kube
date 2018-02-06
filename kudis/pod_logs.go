@@ -2,7 +2,6 @@ package kudis
 
 import (
 	"fmt"
-	"time"
 
 	"bitbucket.org/linkernetworks/aurora/src/deployment"
 	dtypes "bitbucket.org/linkernetworks/aurora/src/deployment/types"
@@ -15,6 +14,7 @@ type PodLogSubscription struct {
 	redis            *redis.Service
 	DeploymentTarget deployment.DeploymentTarget
 	running          bool
+	stop             chan bool
 
 	Target        string
 	PodName       string
@@ -60,15 +60,6 @@ func (p *PodLogSubscription) newEvent(text string) *event.RecordEvent {
 	}
 }
 
-func (p *PodLogSubscription) NumSubscribers() (int, error) {
-	topic := p.Topic()
-	nums, err := p.redis.GetNumSub(topic)
-	if err != nil {
-		return -1, err
-	}
-	return nums[topic], nil
-}
-
 func (s *PodLogSubscription) Stop() error {
 	return nil
 }
@@ -85,6 +76,7 @@ func (s *PodLogSubscription) Start() error {
 
 	s.logStream = logC
 	s.running = true
+	s.stop = make(chan bool)
 
 	go s.stream()
 	return nil
@@ -93,29 +85,12 @@ func (s *PodLogSubscription) Start() error {
 func (s *PodLogSubscription) stream() {
 	logC := s.logStream
 	topic := s.Topic()
-	frames := []int{}
 STREAM:
 	for {
 		select {
-		case <-time.Tick(time.Second * 10):
-			n, err := s.NumSubscribers()
-			if err != nil {
-				// redis connections error
-				logger.Errorf("failed to get the number of redis subscriptions: error=%v", err)
-				continue
-			}
-
-			logger.Debugf("topic:%s number of the subscribers: %d", topic, n)
-			frames = append(frames, n)
-
-			for len(frames) > 2 {
-				if reduce(frames) == 0 {
-					logger.Info("No redis subscription. stop streaming...")
-					break STREAM
-				}
-				frames = frames[1:]
-			}
-
+		case <-s.stop:
+			// FIXME: close the reader
+			break STREAM
 		case lc, ok := <-logC:
 			if ok {
 				// publish to redis with the topic
