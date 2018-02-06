@@ -42,7 +42,7 @@ func (k *Kudis) GetDeploymentTarget(target string) (dt deployment.DeploymentTarg
 	return dt, nil
 }
 
-func (k *Kudis) SubscribePodEvent(ctx context.Context, req *pb.PodLogSubscriptionRequest) (*pb.SubscriptionResponse, error) {
+func (k *Kudis) SubscribePodEvent(ctx context.Context, req *pb.PodEventSubscriptionRequest) (*pb.SubscriptionResponse, error) {
 	target := req.GetTarget()
 	dt, err := k.GetDeploymentTarget(target)
 	if err != nil {
@@ -51,8 +51,10 @@ func (k *Kudis) SubscribePodEvent(ctx context.Context, req *pb.PodLogSubscriptio
 			Reason:  err.Error(),
 		}, err
 	}
+	var subscription Subscription = NewPodEventSubscription(k.redisService, target, dt, req.GetPodName())
+	success, reason, err := k.Subscribe(subscription)
+	return &pb.SubscriptionResponse{Success: success, Reason: reason}, err
 
-	return &pb.SubscriptionResponse{Success: true}, err
 }
 
 func (k *Kudis) SubscribePodLogs(ctx context.Context, req *pb.PodLogSubscriptionRequest) (*pb.SubscriptionResponse, error) {
@@ -73,10 +75,7 @@ func (k *Kudis) SubscribePodLogs(ctx context.Context, req *pb.PodLogSubscription
 	)
 
 	success, reason, err := k.Subscribe(subscription)
-	return &pb.SubscriptionResponse{
-		Success: success,
-		Reason:  reason,
-	}, err
+	return &pb.SubscriptionResponse{Success: success, Reason: reason}, err
 }
 
 func (k *Kudis) Subscribe(subscription Subscription) (success bool, reason string, err error) {
@@ -112,6 +111,15 @@ func (k *Kudis) StartSubscription(subscription Subscription) error {
 	return nil
 }
 
+func (k *Kudis) QueryNumSubscribers(s Subscription) (int, error) {
+	topic := s.Topic()
+	nums, err := k.redisService.GetNumSub(topic)
+	if err != nil {
+		return -1, err
+	}
+	return nums[topic], nil
+}
+
 func (k *Kudis) CleanUp() error {
 
 	k.subscriptions.Range(func(key interface{}, val interface{}) bool {
@@ -123,7 +131,7 @@ func (k *Kudis) CleanUp() error {
 			frames = val.([]int)
 		}
 
-		var n, err = s.NumSubscribers()
+		var n, err = k.QueryNumSubscribers(s)
 		if err != nil {
 			// redis connections error
 			logger.Errorf("failed to get the number of redis subscriptions: error=%v", err)

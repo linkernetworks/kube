@@ -18,8 +18,34 @@ type PodEventSubscription struct {
 	PodName          string
 }
 
+func NewPodEventSubscription(rds *redis.Service, target string, dt deployment.DeploymentTarget, podName string) *PodEventSubscription {
+	return &PodEventSubscription{
+		redis:            rds,
+		Target:           target,
+		DeploymentTarget: dt,
+		PodName:          podName,
+	}
+}
+
 func (s *PodEventSubscription) Topic() string {
 	return fmt.Sprintf("target:%s:pod:%s:events", s.Target, s.PodName)
+}
+
+func (s *PodEventSubscription) IsRunning() bool {
+	return s.running
+}
+
+func (p *PodEventSubscription) NumSubscribers() (int, error) {
+	topic := p.Topic()
+	nums, err := p.redis.GetNumSub(topic)
+	if err != nil {
+		return -1, err
+	}
+	return nums[topic], nil
+}
+
+func (s *PodEventSubscription) Stop() error {
+	return nil
 }
 
 func (s *PodEventSubscription) Start() error {

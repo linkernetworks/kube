@@ -7,63 +7,53 @@ import (
 	"bitbucket.org/linkernetworks/aurora/src/deployment"
 	redis "bitbucket.org/linkernetworks/aurora/src/service/redis"
 
-	"github.com/stretchr/testify/suite"
+	"github.com/stretchr/testify/assert"
 )
 
-type ServerTestSuite struct {
-	suite.Suite
-	config config.Config
-}
-
-func (suite *ServerTestSuite) TestCleanUp() {
-	cf := suite.config
+func TestCleanUp(t *testing.T) {
+	cf := config.MustRead("../../../config/testing.json")
 	rds := redis.New(cf.Redis)
 	dts := deployment.LoadDeploymentTargets(cf.JobController.DeploymentTargets, rds)
 
 	server := New(rds, dts)
-	suite.NotNil(server)
+	assert.NotNil(t, server)
 
 	dt, err := server.GetDeploymentTarget("default")
-	suite.NoError(err)
+	assert.NoError(t, err)
 
 	var subscription Subscription = NewPodLogSubscription(rds, "default", dt, "mongo-0", "mongo-sidecar", 10)
-	suite.NotNil(subscription)
+	assert.NotNil(t, subscription)
 
 	success, reason, err := server.Subscribe(subscription)
-	suite.NoError(err)
-	suite.True(success)
-	suite.T().Logf("reason: %s", reason)
+	assert.NoError(t, err)
+	assert.True(t, success)
+	t.Logf("reason: %s", reason)
 
 	for i := 0; i < 4; i++ {
 		var err = server.CleanUp()
-		suite.NoError(err)
+		assert.NoError(t, err)
 	}
 }
 
-func (suite *ServerTestSuite) TestSubscribePodLogs() {
-	cf := suite.config
+func TestSubscribePodLogs(t *testing.T) {
+	cf := config.MustRead("../../../config/testing.json")
 	rds := redis.New(cf.Redis)
 	dts := deployment.LoadDeploymentTargets(cf.JobController.DeploymentTargets, rds)
 
 	server := New(rds, dts)
-	suite.NotNil(server)
+	assert.NotNil(t, server)
 
 	dt, err := server.GetDeploymentTarget("default")
-	suite.NoError(err)
+	assert.NoError(t, err)
 
 	var subscription Subscription = NewPodLogSubscription(rds, "default", dt, "mongo-0", "mongo", 10)
-	suite.NotNil(subscription)
+	assert.NotNil(t, subscription)
 
 	success, reason, err := server.Subscribe(subscription)
-	suite.NoError(err)
-	suite.True(success)
-	suite.T().Logf("reason: %s", reason)
+	assert.NoError(t, err)
+	assert.True(t, success)
+	t.Logf("reason: %s", reason)
 
 	err = subscription.Stop()
-	suite.NoError(err)
-}
-
-func TestServerTestSuite(t *testing.T) {
-	cf := config.MustRead("../../../config/testing.json")
-	suite.Run(t, &ServerTestSuite{config: cf})
+	assert.NoError(t, err)
 }
