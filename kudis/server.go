@@ -6,6 +6,8 @@ import (
 	"sync"
 
 	"bitbucket.org/linkernetworks/aurora/src/deployment"
+	"bitbucket.org/linkernetworks/aurora/src/logger"
+
 	pb "bitbucket.org/linkernetworks/aurora/src/kubernetes/kudis/pb"
 	"bitbucket.org/linkernetworks/aurora/src/service/redis"
 	"github.com/sirupsen/logrus"
@@ -21,6 +23,7 @@ type Kudis struct {
 	listener          net.Listener
 
 	subscriptions sync.Map
+	frames        sync.Map
 }
 
 func New(rds *redis.Service, dts deployment.DeploymentTargetMap) *Kudis {
@@ -93,6 +96,41 @@ func (k *Kudis) StartSubscription(subscription Subscription) error {
 		return err
 	}
 	k.subscriptions.Store(topic, subscription)
+	return nil
+}
+
+func (k *Kudis) CleanUp() error {
+
+	k.subscriptions.Range(func(key interface{}, val interface{}) bool {
+		var s = val.(Subscription)
+		var topic = s.Topic()
+
+		var frames = []int{}
+		if val, ok := k.frames.LoadOrStore(topic, frames); ok {
+			frames = val.([]int)
+		}
+
+		var n, err = s.NumSubscribers()
+		if err != nil {
+			// redis connections error
+			logger.Errorf("failed to get the number of redis subscriptions: error=%v", err)
+			return true
+		}
+
+		logger.Debugf("topic:%s number of the subscribers: %d", topic, n)
+
+		frames = append(frames, n)
+		for len(frames) > 2 {
+			if reduce(frames) == 0 {
+				logger.Info("No redis subscription. stop streaming...")
+			}
+			frames = frames[1:]
+		}
+
+		k.frames.Store(topic, frames)
+		return true
+	})
+
 	return nil
 }
 
