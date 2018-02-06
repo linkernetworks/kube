@@ -2,7 +2,7 @@ package nodesync
 
 import (
 	"bitbucket.org/linkernetworks/aurora/src/entity"
-	"bitbucket.org/linkernetworks/aurora/src/kubemon"
+	"bitbucket.org/linkernetworks/aurora/src/kubernetes/kubemon"
 	"bitbucket.org/linkernetworks/aurora/src/kubernetes/nvidia"
 	"bitbucket.org/linkernetworks/aurora/src/logger"
 	"bitbucket.org/linkernetworks/aurora/src/service/mongo"
