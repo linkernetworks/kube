@@ -11,14 +11,6 @@ import (
 	"bitbucket.org/linkernetworks/aurora/src/service/redis"
 )
 
-type Subscription interface {
-	Topic() string
-	NumSubscribers() (int, error)
-
-	Start() error
-	IsRunning() bool
-}
-
 type PodLogSubscription struct {
 	redis            *redis.Service
 	DeploymentTarget deployment.DeploymentTarget
@@ -51,15 +43,17 @@ func (s *PodLogSubscription) Topic() string {
 	return fmt.Sprintf("target:%s:pod:%s:container:%s:logs", s.Target, s.PodName, s.ContainerName)
 }
 
-func (p *PodLogSubscription) newUpdateEvent(text string) *event.RecordEvent {
+func (p *PodLogSubscription) newEvent(text string) *event.RecordEvent {
 	return &event.RecordEvent{
-		Type: "record.update",
-		ContainerLog: &event.RecordContainerLogEvent{
-			Document:      "pod.container.logs",
-			Target:        p.Target,
-			DeploymentId:  p.PodName,
-			ContainerName: p.ContainerName,
-			Log:           text,
+		Type: "record.insert",
+		Insert: &event.RecordInsertEvent{
+			Document: "pod.container.logs",
+			Record: map[string]interface{}{
+				"target":    p.Target,
+				"pod":       p.PodName,
+				"container": p.ContainerName,
+				"log":       text,
+			},
 		},
 	}
 }
@@ -87,14 +81,6 @@ func (s *PodLogSubscription) Start() error {
 
 	go s.stream(logC)
 	return nil
-}
-
-func reduce(frames []int) int {
-	sum := 0
-	for _, f := range frames {
-		sum += f
-	}
-	return sum
 }
 
 func (s *PodLogSubscription) stream(logC deployment.ContainerLogStream) {
@@ -125,7 +111,7 @@ STREAM:
 		case lc, ok := <-logC:
 			if ok {
 				// publish to redis with the topic
-				s.redis.PublishAndSetJSON(topic, s.newUpdateEvent(lc.Line))
+				s.redis.PublishAndSetJSON(topic, s.newEvent(lc.Line))
 			} else {
 				// receive log EOF
 				logger.Infof("topic:%s EOF", topic)

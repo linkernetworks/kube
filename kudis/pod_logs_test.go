@@ -27,13 +27,13 @@ func TestPodSubscriptionNewUpdateEvent(t *testing.T) {
 	assert.Equal(t, "target:default:pod:DPID:container:johnlin:logs", subc.Topic())
 
 	message := "log message"
-	pEvent := subc.newUpdateEvent(message)
-	assert.Equal(t, "record.update", pEvent.Type)
-	assert.Equal(t, "pod.container.logs", pEvent.ContainerLog.Document)
-	assert.Equal(t, "default", pEvent.ContainerLog.Target)
-	assert.Equal(t, "DPID", pEvent.ContainerLog.DeploymentId)
-	assert.Equal(t, "johnlin", pEvent.ContainerLog.ContainerName)
-	assert.Equal(t, message, pEvent.ContainerLog.Log)
+	pEvent := subc.newEvent(message)
+	assert.Equal(t, "record.insert", pEvent.Type)
+	assert.Equal(t, "pod.container.logs", pEvent.Insert.Document)
+	assert.Equal(t, "default", pEvent.Insert.Record["target"])
+	assert.Equal(t, "DPID", pEvent.Insert.Record["pod"])
+	assert.Equal(t, "johnlin", pEvent.Insert.Record["container"])
+	assert.Equal(t, message, pEvent.Insert.Record["log"])
 }
 
 func TestPodSubscriptionGetNumSub(t *testing.T) {
