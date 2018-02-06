@@ -126,9 +126,13 @@ func (k *Kudis) CleanUp() error {
 
 				// load the subscription and stop the streaming
 				if val, ok := k.subscriptions.Load(topic); ok {
-					if err := val.(Subscription).Stop(); err != nil {
-						logger.Errorf("Failed to stop subscription: %v", err)
-					} else {
+					if sub, ok := val.(Subscription); ok {
+						if sub.IsRunning() {
+							if err := val.(Subscription).Stop(); err != nil {
+								logger.Errorf("Failed to stop subscription: %v", err)
+							}
+						}
+
 						k.subscriptions.Delete(topic)
 						k.frames.Delete(topic)
 						// iterate to the next subscription
