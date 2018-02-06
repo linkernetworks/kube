@@ -42,7 +42,7 @@ func (k *Kudis) GetDeploymentTarget(target string) (dt deployment.DeploymentTarg
 	return dt, nil
 }
 
-func (k *Kudis) SubscribePodLogs(ctx context.Context, req *pb.PodLogsSubscriptionRequest) (*pb.SubscriptionResponse, error) {
+func (k *Kudis) SubscribePodLogs(ctx context.Context, req *pb.PodLogSubscriptionRequest) (*pb.SubscriptionResponse, error) {
 	target := req.GetTarget()
 	dt, err := k.GetDeploymentTarget(target)
 	if err != nil {
@@ -52,7 +52,7 @@ func (k *Kudis) SubscribePodLogs(ctx context.Context, req *pb.PodLogsSubscriptio
 		}, err
 	}
 
-	var subscription Subscription = NewPodLogsSubscription(
+	var subscription Subscription = NewPodLogSubscription(
 		k.redisService, target, dt,
 		req.GetPodName(),
 		req.GetContainerName(),

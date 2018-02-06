@@ -26,7 +26,7 @@ func (suite *ServerTestSuite) TestCleanUp() {
 	dt, err := server.GetDeploymentTarget("default")
 	suite.NoError(err)
 
-	var subscription Subscription = NewPodLogsSubscription(rds, "default", dt, "mongo-0", "mongo-sidecar", 10)
+	var subscription Subscription = NewPodLogSubscription(rds, "default", dt, "mongo-0", "mongo-sidecar", 10)
 	suite.NotNil(subscription)
 
 	success, reason, err := server.Subscribe(subscription)
@@ -40,7 +40,7 @@ func (suite *ServerTestSuite) TestCleanUp() {
 	}
 }
 
-func (suite *ServerTestSuite) TestSubscribe() {
+func (suite *ServerTestSuite) TestSubscribePodLogs() {
 	cf := suite.config
 	rds := redis.New(cf.Redis)
 	dts := deployment.LoadDeploymentTargets(cf.JobController.DeploymentTargets, rds)
@@ -51,7 +51,7 @@ func (suite *ServerTestSuite) TestSubscribe() {
 	dt, err := server.GetDeploymentTarget("default")
 	suite.NoError(err)
 
-	var subscription Subscription = NewPodLogsSubscription(rds, "default", dt, "mongo-0", "mongo", 10)
+	var subscription Subscription = NewPodLogSubscription(rds, "default", dt, "mongo-0", "mongo", 10)
 	suite.NotNil(subscription)
 
 	success, reason, err := server.Subscribe(subscription)

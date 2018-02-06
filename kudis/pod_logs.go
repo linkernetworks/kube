@@ -26,7 +26,7 @@ type PodLogSubscription struct {
 	logStream deployment.ContainerLogStream
 }
 
-func NewPodLogsSubscription(rds *redis.Service, target string, dt deployment.DeploymentTarget, podName string, containerName string, tl int64) *PodLogSubscription {
+func NewPodLogSubscription(rds *redis.Service, target string, dt deployment.DeploymentTarget, podName string, containerName string, tl int64) *PodLogSubscription {
 	return &PodLogSubscription{
 		redis:            rds,
 		Target:           target,

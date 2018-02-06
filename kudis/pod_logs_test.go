@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestPodLogsSubscriptionTopic(t *testing.T) {
+func TestPodLogSubscriptionTopic(t *testing.T) {
 	subs := PodLogSubscription{
 		Target:        "default",
 		PodName:       "DPID",

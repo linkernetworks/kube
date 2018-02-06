@@ -5,12 +5,18 @@ package messages;
 option go_package = "messages";
 
 service SubscriptionService {
-  rpc SubscribePodLogs(PodLogsSubscriptionRequest) returns (SubscriptionResponse) {}
+  rpc SubscribePodLogs(PodLogSubscriptionRequest) returns (SubscriptionResponse) {}
+  rpc SubscribePodEvent(PodEventSubscriptionRequest) returns (SubscriptionResponse) {}
+}
+
+message PodEventSubscriptionRequest {
+    string Target = 1;
+    string PodName = 2;
 }
 
 
 // only use in SubscribePodLogs for subscribing a pod container logs
-message PodLogsSubscriptionRequest {
+message PodLogSubscriptionRequest {
     // target is the cluster name
     string Target = 1;
     string PodName = 2;
@@ -26,5 +32,5 @@ message SubscriptionResponse {
 }
 
 message SubscriptionRequest {
-    PodLogsSubscriptionRequest podContainerLogRequest = 2;
+    PodLogSubscriptionRequest podContainerLogRequest = 2;
 }
