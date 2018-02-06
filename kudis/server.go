@@ -42,6 +42,19 @@ func (k *Kudis) GetDeploymentTarget(target string) (dt deployment.DeploymentTarg
 	return dt, nil
 }
 
+func (k *Kudis) SubscribePodEvent(ctx context.Context, req *pb.PodLogSubscriptionRequest) (*pb.SubscriptionResponse, error) {
+	target := req.GetTarget()
+	dt, err := k.GetDeploymentTarget(target)
+	if err != nil {
+		return &pb.SubscriptionResponse{
+			Success: false,
+			Reason:  err.Error(),
+		}, err
+	}
+
+	return &pb.SubscriptionResponse{Success: true}, err
+}
+
 func (k *Kudis) SubscribePodLogs(ctx context.Context, req *pb.PodLogSubscriptionRequest) (*pb.SubscriptionResponse, error) {
 	target := req.GetTarget()
 	dt, err := k.GetDeploymentTarget(target)
