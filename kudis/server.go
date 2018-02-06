@@ -123,6 +123,7 @@ func (k *Kudis) CleanUp() error {
 		for len(frames) > 2 {
 			if reduce(frames) == 0 {
 				logger.Info("No redis subscription. stop streaming...")
+				// TODO: load the subscription and stop the streaming
 			}
 			frames = frames[1:]
 		}
