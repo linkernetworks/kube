@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestUnmarshalPodContainerLogRequestJSON(t *testing.T) {
+func TestUnmarshalPodLogsSubscriptionRequestJSON(t *testing.T) {
 	c := `
 	{
 		"Target": "default",
@@ -16,7 +16,7 @@ func TestUnmarshalPodContainerLogRequestJSON(t *testing.T) {
 		"TailLines": 5
 	}
 	`
-	req := PodContainerLogRequest{}
+	req := PodLogsSubscriptionRequest{}
 	err := jsonpb.UnmarshalString(c, &req)
 	if err != nil {
 		t.Fatal(err)
