@@ -9,13 +9,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestPodSubscriptionTopic(t *testing.T) {
-	jSubscription := PodLogSubscription{
+func TestPodLogsSubscriptionTopic(t *testing.T) {
+	subs := PodLogSubscription{
 		Target:        "default",
 		PodName:       "DPID",
 		ContainerName: "log-collector",
 	}
-	assert.Equal(t, "target:default:pod:DPID:container:log-collector:logs", jSubscription.Topic())
+	assert.Equal(t, "target:default:pod:DPID:container:log-collector:logs", subs.Topic())
 }
 
 func TestPodSubscriptionNewUpdateEvent(t *testing.T) {

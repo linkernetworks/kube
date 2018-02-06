@@ -56,16 +56,17 @@ func (k *Kudis) SubscribePodLogs(ctx context.Context, req *pb.PodLogsSubscriptio
 		req.GetTailLines(),
 	)
 
-	return k.Subscribe(subscription)
+	success, reason, err := k.Subscribe(subscription)
+	return &pb.SubscriptionResponse{
+		Success: success,
+		Reason:  reason,
+	}, err
 }
 
-func (k *Kudis) Subscribe(subscription Subscription) (*pb.SubscriptionResponse, error) {
+func (k *Kudis) Subscribe(subscription Subscription) (success bool, reason string, err error) {
 	if prevsub, ok := k.LoadSubscription(subscription); ok {
 		if prevsub.IsRunning() {
-			return &pb.SubscriptionResponse{
-				Success: true,
-				Reason:  "The subscription is already running.",
-			}, nil
+			return true, "The subscription is already running.", nil
 		}
 
 		// load the pod log subscription object so that we can restart it again
@@ -73,13 +74,10 @@ func (k *Kudis) Subscribe(subscription Subscription) (*pb.SubscriptionResponse, 
 	}
 
 	if err := k.StartSubscription(subscription); err != nil {
-		return &pb.SubscriptionResponse{
-			Success: false,
-			Reason:  err.Error(),
-		}, err
+		return false, err.Error(), err
 	}
 
-	return &pb.SubscriptionResponse{Success: true}, nil
+	return true, "topic subscribed successfully", nil
 }
 
 func (k *Kudis) LoadSubscription(subscription Subscription) (Subscription, bool) {

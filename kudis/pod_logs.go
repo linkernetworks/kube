@@ -22,6 +22,8 @@ type PodLogSubscription struct {
 	Log           string
 
 	tailLines int64
+
+	logStream deployment.ContainerLogStream
 }
 
 func NewPodLogsSubscription(rds *redis.Service, target string, dt deployment.DeploymentTarget, podName string, containerName string, tl int64) *PodLogSubscription {
@@ -67,6 +69,10 @@ func (p *PodLogSubscription) NumSubscribers() (int, error) {
 	return nums[topic], nil
 }
 
+func (s *PodLogSubscription) Stop() error {
+	return nil
+}
+
 func (s *PodLogSubscription) Start() error {
 	// the pod id of the job
 	deployment := dtypes.Deployment{ID: s.PodName}
@@ -77,13 +83,15 @@ func (s *PodLogSubscription) Start() error {
 		return err
 	}
 
+	s.logStream = logC
 	s.running = true
 
-	go s.stream(logC)
+	go s.stream()
 	return nil
 }
 
-func (s *PodLogSubscription) stream(logC deployment.ContainerLogStream) {
+func (s *PodLogSubscription) stream() {
+	logC := s.logStream
 	topic := s.Topic()
 	frames := []int{}
 STREAM:

@@ -19,7 +19,7 @@ type PodEventSubscription struct {
 }
 
 func (s *PodEventSubscription) Topic() string {
-	return fmt.Sprintf("target:%s:pod:%s:events:%s", s.Target, s.PodName)
+	return fmt.Sprintf("target:%s:pod:%s:events", s.Target, s.PodName)
 }
 
 func (s *PodEventSubscription) Start() error {
