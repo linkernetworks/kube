@@ -34,8 +34,10 @@ func (suite *ServerTestSuite) TestCleanUp() {
 	suite.True(success)
 	suite.T().Logf("reason: %s", reason)
 
-	err = server.CleanUp()
-	suite.NoError(err)
+	for i := 0; i < 4; i++ {
+		var err = server.CleanUp()
+		suite.NoError(err)
+	}
 }
 
 func (suite *ServerTestSuite) TestSubscribe() {
