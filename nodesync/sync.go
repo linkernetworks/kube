@@ -2,6 +2,7 @@ package nodesync
 
 import (
 	"bitbucket.org/linkernetworks/aurora/src/deployment"
+	dnodes "bitbucket.org/linkernetworks/aurora/src/deployment/nodes"
 	"bitbucket.org/linkernetworks/aurora/src/entity"
 	"bitbucket.org/linkernetworks/aurora/src/kubemon"
 	"bitbucket.org/linkernetworks/aurora/src/kubernetes/kubemon"
@@ -25,12 +26,12 @@ type NodeStats struct {
 	Deleted int
 }
 
-type NodeCh chan *entity.Node
+type NodeCh chan *dnodes.Node
 type Signal chan bool
 
 type NodeSync struct {
 	clientset *kubernetes.Clientset
-	context   *mongo.Session
+	session   *mongo.Session
 	dt        *deployment.KubeDeploymentTarget
 	updateC   NodeCh
 	deleteC   NodeCh
@@ -50,7 +51,7 @@ func New(clientset *kubernetes.Clientset, m *mongo.Service, dt *deployment.KubeD
 
 	return &NodeSync{
 		clientset: clientset,
-		context:   m.NewSession(),
+		session:   m.NewSession(),
 		dt:        dt,
 		updateC:   make(NodeCh, 10),
 		deleteC:   make(NodeCh, 10),
@@ -70,7 +71,7 @@ func (nts *NodeSync) Sync() Signal {
 	// keep watch node change events
 	_, controller := kubemon.WatchNodes(nts.clientset, fields.Everything(), cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			ne := &entity.Node{}
+			ne := &dnodes.Node{}
 			n := obj.(*corev1.Node)
 			nts.stats.Added++
 
@@ -92,13 +93,13 @@ func (nts *NodeSync) Sync() Signal {
 
 			logger.Infof("[Event] node %s deleted", n.Name)
 
-			nts.deleteC <- &entity.Node{Name: n.Name}
+			nts.deleteC <- &dnodes.Node{Name: n.Name}
 			select {
 			case nts.signal <- true:
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			ne := &entity.Node{}
+			ne := &dnodes.Node{}
 			n := newObj.(*corev1.Node)
 			nts.stats.Updated++
 
@@ -130,18 +131,18 @@ func (nts *NodeSync) Stop() {
 	nts.stop <- e
 }
 
-func (nts *NodeSync) UpsertNode(node *entity.Node) error {
+func (nts *NodeSync) UpsertNode(node *dnodes.Node) error {
 	update := bson.M{"$set": node}
 	q := bson.M{"name": node.Name}
 	// debug use showing log messages
 	logger.Infof("%#v", node)
-	_, err := nts.context.C(entity.NodeCollectionName).Upsert(q, update)
+	_, err := nts.session.C(entity.NodeCollectionName).Upsert(q, update)
 	return err
 }
 
 func (nts *NodeSync) RemoveNodeByName(name string) error {
 	q := bson.M{"name": name}
-	return nts.context.C(entity.NodeCollectionName).Remove(q)
+	return nts.session.C(entity.NodeCollectionName).Remove(q)
 }
 
 func (nts *NodeSync) Prune() error {
@@ -154,8 +155,8 @@ func (nts *NodeSync) Prune() error {
 	for _, n := range nodesList {
 		newNodeNames = append(newNodeNames, n.Name)
 	}
-	nodes := []entity.Node{}
-	err = nts.context.C(entity.NodeCollectionName).Find(nil).Select(bson.M{"name": 1}).All(&nodes)
+	nodes := []dnodes.Node{}
+	err = nts.session.C(entity.NodeCollectionName).Find(nil).Select(bson.M{"name": 1}).All(&nodes)
 	if err != nil {
 		return err
 	}
@@ -163,7 +164,7 @@ func (nts *NodeSync) Prune() error {
 	for _, n := range nodes {
 		if !nodeInCluster(n.Name, newNodeNames) {
 			logger.Info("Pruning node %s", n.Name)
-			nts.deleteC <- &entity.Node{Name: n.Name}
+			nts.deleteC <- &dnodes.Node{Name: n.Name}
 		}
 	}
 	return nil
