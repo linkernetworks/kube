@@ -32,7 +32,7 @@ func TestConnectWith(t *testing.T) {
 	m := mongo.New(newcf.Mongo.Url)
 	assert.NotNil(t, m)
 
-	r := redis.NewService(newcf.Redis)
+	r := redis.New(newcf.Redis)
 	assert.NotNil(t, r)
 }
 

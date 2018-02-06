@@ -38,7 +38,7 @@ func TestPodSubscriptionNewUpdateEvent(t *testing.T) {
 
 func TestPodSubscriptionGetNumSub(t *testing.T) {
 	cf := config.MustRead("../../../config/testing.json")
-	rd := redissvc.NewService(cf.Redis)
+	rd := redissvc.New(cf.Redis)
 
 	s := PodLogSubscription{
 		redis:         rd,
