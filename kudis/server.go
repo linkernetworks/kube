@@ -123,7 +123,19 @@ func (k *Kudis) CleanUp() error {
 		for len(frames) > 2 {
 			if reduce(frames) == 0 {
 				logger.Info("No redis subscription. stop streaming...")
-				// TODO: load the subscription and stop the streaming
+
+				// load the subscription and stop the streaming
+				if val, ok := k.subscriptions.Load(topic); ok {
+					if err := val.(Subscription).Stop(); err != nil {
+						logger.Errorf("Failed to stop subscription: %v", err)
+					} else {
+						k.subscriptions.Delete(topic)
+						k.frames.Delete(topic)
+						// iterate to the next subscription
+						return true
+					}
+				}
+
 			}
 			frames = frames[1:]
 		}
