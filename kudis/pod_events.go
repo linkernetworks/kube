@@ -11,7 +11,9 @@ import (
 )
 
 type PodEventSubscription struct {
-	redis            *redis.Service
+	redis   *redis.Service
+	watcher *deployment.KubernetesWatcher
+
 	DeploymentTarget deployment.DeploymentTarget
 	running          bool
 	Target           string
@@ -50,9 +52,9 @@ func (s *PodEventSubscription) Stop() error {
 
 func (s *PodEventSubscription) Start() error {
 	var dt = s.DeploymentTarget.(*deployment.KubeDeploymentTarget)
-	var watcher = dt.WatchPodEvents(s.PodName)
 	s.running = true
-	go s.stream(watcher)
+	s.watcher = dt.WatchPodEvents(s.PodName)
+	go s.stream()
 	return nil
 }
 
@@ -74,12 +76,12 @@ func (p *PodEventSubscription) newEvent(e *v1.Event) *event.RecordEvent {
 	}
 }
 
-func (s *PodEventSubscription) stream(watcher *deployment.KubernetesWatcher) {
+func (s *PodEventSubscription) stream() {
 	var topic = s.Topic()
 STREAM:
 	for {
 		select {
-		case e, ok := <-watcher.C:
+		case e, ok := <-s.watcher.C:
 			if ok {
 				// publish to redis with the topic
 				s.redis.PublishAndSetJSON(topic, s.newEvent(e))
