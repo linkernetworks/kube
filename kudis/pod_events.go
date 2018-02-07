@@ -24,6 +24,7 @@ type PodEventSubscription struct {
 func NewPodEventSubscription(rds *redis.Service, target string, dt deployment.DeploymentTarget, podName string) *PodEventSubscription {
 	return &PodEventSubscription{
 		redis:            rds,
+		stop:             make(chan bool),
 		Target:           target,
 		DeploymentTarget: dt,
 		PodName:          podName,
@@ -47,7 +48,6 @@ func (s *PodEventSubscription) Start() error {
 	var dt = s.DeploymentTarget.(*deployment.KubeDeploymentTarget)
 	s.running = true
 	s.watcher = dt.WatchPodEvents(s.PodName)
-	s.stop = make(chan bool)
 	go s.stream()
 	return nil
 }
