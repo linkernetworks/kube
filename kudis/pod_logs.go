@@ -69,12 +69,12 @@ func (s *PodLogSubscription) Start() error {
 	deployment := dtypes.Deployment{ID: s.PodName}
 
 	// listen the container logs from the log channel
-	logC, err := s.DeploymentTarget.GetContainerLogStream(&deployment, s.ContainerName, s.tailLines)
+	watcher, err := s.DeploymentTarget.GetContainerLogStream(&deployment, s.ContainerName, s.tailLines)
 	if err != nil {
 		return err
 	}
 
-	s.logStream = logC
+	s.logStream = watcher.C
 	s.running = true
 	s.stop = make(chan bool)
 
