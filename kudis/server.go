@@ -15,7 +15,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-type Kudis struct {
+type Server struct {
 	redisService      *redis.Service
 	deploymentTargets deployment.DeploymentTargetMap
 	running           bool
@@ -26,14 +26,15 @@ type Kudis struct {
 	frames        sync.Map
 }
 
-func New(rds *redis.Service, dts deployment.DeploymentTargetMap) *Kudis {
-	return &Kudis{
+// NewServer Kudis server
+func NewServer(rds *redis.Service, dts deployment.DeploymentTargetMap) *Server {
+	return &Server{
 		redisService:      rds,
 		deploymentTargets: dts,
 	}
 }
 
-func (k *Kudis) GetDeploymentTarget(target string) (dt deployment.DeploymentTarget, err error) {
+func (k *Server) GetDeploymentTarget(target string) (dt deployment.DeploymentTarget, err error) {
 	var ok bool = false
 	dt, ok = k.deploymentTargets[target]
 	if !ok {
@@ -42,7 +43,7 @@ func (k *Kudis) GetDeploymentTarget(target string) (dt deployment.DeploymentTarg
 	return dt, nil
 }
 
-func (k *Kudis) SubscribePodEvent(ctx context.Context, req *pb.PodEventSubscriptionRequest) (*pb.SubscriptionResponse, error) {
+func (k *Server) SubscribePodEvent(ctx context.Context, req *pb.PodEventSubscriptionRequest) (*pb.SubscriptionResponse, error) {
 	target := req.GetTarget()
 	dt, err := k.GetDeploymentTarget(target)
 	if err != nil {
@@ -57,7 +58,7 @@ func (k *Kudis) SubscribePodEvent(ctx context.Context, req *pb.PodEventSubscript
 
 }
 
-func (k *Kudis) SubscribePodLogs(ctx context.Context, req *pb.PodLogSubscriptionRequest) (*pb.SubscriptionResponse, error) {
+func (k *Server) SubscribePodLogs(ctx context.Context, req *pb.PodLogSubscriptionRequest) (*pb.SubscriptionResponse, error) {
 	target := req.GetTarget()
 	dt, err := k.GetDeploymentTarget(target)
 	if err != nil {
@@ -78,7 +79,7 @@ func (k *Kudis) SubscribePodLogs(ctx context.Context, req *pb.PodLogSubscription
 	return &pb.SubscriptionResponse{Success: success, Reason: reason}, err
 }
 
-func (k *Kudis) Subscribe(subscription Subscription) (success bool, reason string, err error) {
+func (k *Server) Subscribe(subscription Subscription) (success bool, reason string, err error) {
 	if prevsub, ok := k.LoadSubscription(subscription); ok {
 		if prevsub.IsRunning() {
 			return true, "The subscription is already running.", nil
@@ -95,13 +96,13 @@ func (k *Kudis) Subscribe(subscription Subscription) (success bool, reason strin
 	return true, "topic subscribed successfully", nil
 }
 
-func (k *Kudis) LoadSubscription(subscription Subscription) (Subscription, bool) {
+func (k *Server) LoadSubscription(subscription Subscription) (Subscription, bool) {
 	// if the topic is already been subscribed then return subscribed
 	val, ok := k.subscriptions.LoadOrStore(subscription.Topic(), subscription)
 	return val.(Subscription), ok
 }
 
-func (k *Kudis) StartSubscription(subscription Subscription) error {
+func (k *Server) StartSubscription(subscription Subscription) error {
 	var topic = subscription.Topic()
 	logrus.Infof("Starting subscription: topic=%s", topic)
 	if err := subscription.Start(); err != nil {
@@ -111,7 +112,7 @@ func (k *Kudis) StartSubscription(subscription Subscription) error {
 	return nil
 }
 
-func (k *Kudis) QueryNumSubscribers(s Subscription) (int, error) {
+func (k *Server) QueryNumSubscribers(s Subscription) (int, error) {
 	topic := s.Topic()
 	nums, err := k.redisService.GetNumSub(topic)
 	if err != nil {
@@ -120,7 +121,7 @@ func (k *Kudis) QueryNumSubscribers(s Subscription) (int, error) {
 	return nums[topic], nil
 }
 
-func (k *Kudis) CleanUp() error {
+func (k *Server) CleanUp() error {
 
 	k.subscriptions.Range(func(key interface{}, val interface{}) bool {
 		var s = val.(Subscription)
@@ -172,7 +173,8 @@ func (k *Kudis) CleanUp() error {
 	return nil
 }
 
-func (k *Kudis) Start(bind string) error {
+// Start starts the server
+func (k *Server) Start(bind string) error {
 	// initalize a grpc server
 	k.grpcServer = grpc.NewServer()
 
@@ -189,7 +191,7 @@ func (k *Kudis) Start(bind string) error {
 	return k.grpcServer.Serve(k.listener)
 }
 
-func (k *Kudis) Stop() error {
+func (k *Server) Stop() error {
 	if !k.running {
 		return nil
 	}

@@ -15,7 +15,7 @@ func TestCleanUp(t *testing.T) {
 	rds := redis.New(cf.Redis)
 	dts := deployment.LoadDeploymentTargets(cf.JobController.DeploymentTargets, rds)
 
-	server := New(rds, dts)
+	server := NewServer(rds, dts)
 	assert.NotNil(t, server)
 
 	dt, err := server.GetDeploymentTarget("default")
@@ -40,7 +40,7 @@ func TestSubscribePodLogs(t *testing.T) {
 	rds := redis.New(cf.Redis)
 	dts := deployment.LoadDeploymentTargets(cf.JobController.DeploymentTargets, rds)
 
-	server := New(rds, dts)
+	server := NewServer(rds, dts)
 	assert.NotNil(t, server)
 
 	dt, err := server.GetDeploymentTarget("default")
@@ -63,7 +63,7 @@ func TestSubscribePodEvent(t *testing.T) {
 	rds := redis.New(cf.Redis)
 	dts := deployment.LoadDeploymentTargets(cf.JobController.DeploymentTargets, rds)
 
-	server := New(rds, dts)
+	server := NewServer(rds, dts)
 	assert.NotNil(t, server)
 
 	dt, err := server.GetDeploymentTarget("default")
