@@ -29,6 +29,7 @@ type PodLogSubscription struct {
 func NewPodLogSubscription(rds *redis.Service, target string, dt deployment.DeploymentTarget, podName string, containerName string, tl int64) *PodLogSubscription {
 	return &PodLogSubscription{
 		redis:            rds,
+		stop:             make(chan bool),
 		Target:           target,
 		DeploymentTarget: dt,
 		PodName:          podName,
@@ -76,7 +77,6 @@ func (s *PodLogSubscription) Start() error {
 
 	s.logStream = watcher.C
 	s.running = true
-	s.stop = make(chan bool)
 
 	go s.stream()
 	return nil
