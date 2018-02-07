@@ -11,6 +11,10 @@ import (
 )
 
 func TestCleanUp(t *testing.T) {
+	if _, defined := os.LookupEnv("TEST_K8S"); !defined {
+		t.Skip("require kubernetes")
+		return
+	}
 	cf := config.MustRead("../../../config/testing.json")
 	rds := redis.New(cf.Redis)
 	dts := deployment.LoadDeploymentTargets(cf.JobController.DeploymentTargets, rds)
@@ -36,6 +40,11 @@ func TestCleanUp(t *testing.T) {
 }
 
 func TestSubscribePodLogs(t *testing.T) {
+	if _, defined := os.LookupEnv("TEST_K8S"); !defined {
+		t.Skip("require kubernetes")
+		return
+	}
+
 	cf := config.MustRead("../../../config/testing.json")
 	rds := redis.New(cf.Redis)
 	dts := deployment.LoadDeploymentTargets(cf.JobController.DeploymentTargets, rds)
@@ -59,6 +68,11 @@ func TestSubscribePodLogs(t *testing.T) {
 }
 
 func TestSubscribePodEvent(t *testing.T) {
+	if _, defined := os.LookupEnv("TEST_K8S"); !defined {
+		t.Skip("require kubernetes")
+		return
+	}
+
 	cf := config.MustRead("../../../config/testing.json")
 	rds := redis.New(cf.Redis)
 	dts := deployment.LoadDeploymentTargets(cf.JobController.DeploymentTargets, rds)
