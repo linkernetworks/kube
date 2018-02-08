@@ -32,6 +32,13 @@ func matchPod(obj interface{}, podName string) (*v1.Pod, bool) {
 
 func (t *PodTracker) Track(callback PodReceiver) {
 	_, controller := kubemon.WatchPods(t.clientset, t.namespace, fields.Everything(), cache.ResourceEventHandlerFuncs{
+		AddFunc: func(newObj interface{}) {
+			if pod, ok := matchPod(newObj, t.podName); ok {
+				if callback(pod) {
+					t.Stop()
+				}
+			}
+		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			if pod, ok := matchPod(newObj, t.podName); ok {
 				if callback(pod) {
@@ -39,6 +46,7 @@ func (t *PodTracker) Track(callback PodReceiver) {
 				}
 			}
 		},
+
 		DeleteFunc: func(obj interface{}) {
 			if pod, ok := matchPod(obj, t.podName); ok {
 				if callback(pod) {
