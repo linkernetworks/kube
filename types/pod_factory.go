@@ -17,3 +17,7 @@ type PodDeployment interface {
 	DeploymentIDProvider
 	PodFactory
 }
+
+type PodLabelProvider interface {
+	PodLabels() map[string]string
+}
