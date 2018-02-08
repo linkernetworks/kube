@@ -6,7 +6,7 @@ import (
 
 // Object as Pod
 type PodFactory interface {
-	NewPod(podName string) v1.Pod
+	NewPod(podName string, labels map[string]string) v1.Pod
 }
 
 type DeploymentIDProvider interface {
