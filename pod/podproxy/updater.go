@@ -6,6 +6,7 @@ import (
 	"bitbucket.org/linkernetworks/aurora/src/entity"
 	"bitbucket.org/linkernetworks/aurora/src/event"
 	"bitbucket.org/linkernetworks/aurora/src/kubernetes/pod/podtracker"
+	"bitbucket.org/linkernetworks/aurora/src/kubernetes/pod/podutil"
 	"bitbucket.org/linkernetworks/aurora/src/kubernetes/types"
 	"bitbucket.org/linkernetworks/aurora/src/logger"
 
@@ -68,23 +69,24 @@ func (u *DocumentProxyInfoUpdater) TrackAndSync(doc SpawnableDocument) (*podtrac
 
 	podTracker := podtracker.New(u.Clientset, u.Namespace, podName)
 
-	podTracker.Track(func(pod *v1.Pod) bool {
+	podTracker.Track(func(pod *v1.Pod) (stop bool) {
 		phase := pod.Status.Phase
 		logger.Infof("Tracking notebook pod=%s phase=%s", podName, phase)
 
 		switch phase {
 		case "Pending":
 			u.SyncWithPod(doc, pod)
-			// Check all containers status in a pod. can't be ErrImagePull or ImagePullBackOff
-			for _, c := range pod.Status.ContainerStatuses {
-				if c.State.Waiting != nil {
-					waitingReason := c.State.Waiting.Reason
-					if waitingReason == "ErrImagePull" || waitingReason == "ImagePullBackOff" {
-						logger.Errorf("Container is waiting. Reason %s\n", waitingReason)
 
-						// stop tracking
-						return true
-					}
+			// Check all containers status in a pod. can't be ErrImagePull or ImagePullBackOff
+			cslist := podutil.FindWaitingContainerStatuses(pod)
+			for _, cs := range cslist {
+				reason := cs.State.Waiting.Reason
+				if reason == "ErrImagePull" || reason == "ImagePullBackOff" {
+					logger.Errorf("Container %s is waiting. Reason=%s", cs.ContainerID, reason)
+
+					// stop tracking
+					stop = true
+					return stop
 				}
 			}
 
@@ -92,10 +94,12 @@ func (u *DocumentProxyInfoUpdater) TrackAndSync(doc SpawnableDocument) (*podtrac
 		// Terminating won't be catched
 		case "Running", "Failed", "Succeeded", "Unknown", "Terminating":
 			u.SyncWithPod(doc, pod)
-			return true
+			stop = true
+			return stop
 		}
 
-		return false
+		stop = false
+		return stop
 	})
 	return podTracker, nil
 }
