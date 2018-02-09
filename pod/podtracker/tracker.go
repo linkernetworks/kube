@@ -1,4 +1,4 @@
-package tracker
+package podtracker
 
 import (
 	"bitbucket.org/linkernetworks/aurora/src/kubernetes/kubemon"
