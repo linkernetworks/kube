@@ -21,6 +21,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/kubernetes/pkg/kubelet/images"
 )
 
 type ProxyInfoProvider interface {
@@ -64,6 +65,36 @@ func (u *DocumentProxyInfoUpdater) getPod(doc SpawnableDocument) (*v1.Pod, error
 }
 
 // TrackAndSync tracks the pod of the owner document and returns a pod tracker
+// The following comments are copied from the kubernetes repository:
+//
+//     PodPending means the pod has been accepted by the system, but one or more of the containers
+//     has not been started. This includes time before being bound to a node, as well as time spent
+//     pulling images onto the host.
+//
+//    		PodPending PodPhase = "Pending"
+//
+//     PodRunning means the pod has been bound to a node and all of the containers have been started.
+//     At least one container is still running or is in the process of being restarted.
+//
+//    		PodRunning PodPhase = "Running"
+//
+//     PodSucceeded means that all containers in the pod have voluntarily terminated
+//     with a container exit code of 0, and the system is not going to restart any of these containers.
+//
+//    		PodSucceeded PodPhase = "Succeeded"
+//
+//     PodFailed means that all containers in the pod have terminated, and at least one container has
+//     terminated in a failure (exited with a non-zero exit code or was stopped by the system).
+//
+//    		PodFailed PodPhase = "Failed"
+//
+//     PodUnknown means that for some reason the state of the pod could not be obtained, typically due
+//     to an error in communicating with the host of the pod.
+//
+//    		PodUnknown PodPhase = "Unknown"
+//
+// See package "k8s.io/kubernetes/pkg/apis/core/types.go" for more details.
+
 func (u *DocumentProxyInfoUpdater) TrackAndSync(doc SpawnableDocument) (*podtracker.PodTracker, error) {
 	podName := doc.DeploymentID()
 
@@ -74,14 +105,24 @@ func (u *DocumentProxyInfoUpdater) TrackAndSync(doc SpawnableDocument) (*podtrac
 		logger.Infof("Tracking notebook pod=%s phase=%s", podName, phase)
 
 		switch phase {
-		case "Pending":
+		case v1.PodPending:
 			u.SyncWithPod(doc, pod)
 
 			// Check all containers status in a pod. can't be ErrImagePull or ImagePullBackOff
 			cslist := podutil.FindWaitingContainerStatuses(pod)
 			for _, cs := range cslist {
 				reason := cs.State.Waiting.Reason
-				if reason == "ErrImagePull" || reason == "ImagePullBackOff" {
+				switch reason {
+				case "PodInitializing", "ContainerCreating":
+					// Skip the standard states
+					logger.Infof("Container %s state is %s", cs.ContainerID, reason)
+
+				case images.ErrImageInspect.Error(),
+					images.ErrImagePullBackOff.Error(),
+					images.ErrImagePull.Error(),
+					images.ErrImageNeverPull.Error(),
+					images.RegistryUnavailable.Error(),
+					images.ErrInvalidImageName.Error():
 					logger.Errorf("Container %s is waiting. Reason=%s", cs.ContainerID, reason)
 
 					// stop tracking
@@ -92,7 +133,7 @@ func (u *DocumentProxyInfoUpdater) TrackAndSync(doc SpawnableDocument) (*podtrac
 
 		// Stop the tracker if the status is completion status.
 		// Terminating won't be catched
-		case "Running", "Failed", "Succeeded", "Unknown", "Terminating":
+		case v1.PodRunning, v1.PodFailed, v1.PodSucceeded, v1.PodUnknown:
 			u.SyncWithPod(doc, pod)
 			stop = true
 			return stop

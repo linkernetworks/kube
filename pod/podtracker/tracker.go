@@ -11,25 +11,9 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
-	// api "k8s.io/kubernetes/pkg/apis/core"
+
+	"k8s.io/kubernetes/pkg/kubelet/images"
 )
-
-const ErrImagePullBackOff = "ImagePullBackOff"
-
-// Unable to inspect image
-const ErrImageInspect = "ImageInspectError"
-
-// General image pull error
-const ErrImagePull = "ErrImagePull"
-
-// Required Image is absent on host and PullPolicy is NeverPullImage
-const ErrImageNeverPull = "ErrImageNeverPull"
-
-// Get http error when pulling image from registry
-const RegistryUnavailable = "RegistryUnavailable"
-
-// Unable to parse the image name.
-const ErrInvalidImageName = "InvalidImageName"
 
 type PodTracker struct {
 	clientset *kubernetes.Clientset
@@ -67,13 +51,14 @@ func (t *PodTracker) WaitFor(waitPhase v1.PodPhase) *sync.Cond {
 				switch reason {
 				case "PodInitializing", "ContainerCreating":
 					// Skip the standard states
+					logger.Infof("Container %s state is %s", cs.ContainerID, reason)
 
-				case ErrImageInspect,
-					ErrImagePullBackOff,
-					ErrImagePull,
-					ErrImageNeverPull,
-					RegistryUnavailable,
-					ErrInvalidImageName:
+				case images.ErrImageInspect.Error(),
+					images.ErrImagePullBackOff.Error(),
+					images.ErrImagePull.Error(),
+					images.ErrImageNeverPull.Error(),
+					images.RegistryUnavailable.Error(),
+					images.ErrInvalidImageName.Error():
 					logger.Errorf("Container %s is waiting. Reason=%s", cs.ContainerID, reason)
 
 					// stop tracking
