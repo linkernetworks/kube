@@ -13,6 +13,23 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
+const ErrImagePullBackOff = "ImagePullBackOff"
+
+// Unable to inspect image
+const ErrImageInspect = "ImageInspectError"
+
+// General image pull error
+const ErrImagePull = "ErrImagePull"
+
+// Required Image is absent on host and PullPolicy is NeverPullImage
+const ErrImageNeverPull = "ErrImageNeverPull"
+
+// Get http error when pulling image from registry
+const RegistryUnavailable = "RegistryUnavailable"
+
+// Unable to parse the image name.
+const ErrInvalidImageName = "InvalidImageName"
+
 type PodTracker struct {
 	clientset *kubernetes.Clientset
 	namespace string
@@ -37,24 +54,25 @@ func matchPod(obj interface{}, podName string) (*v1.Pod, bool) {
 func (t *PodTracker) WaitFor(waitPhase v1.PodPhase) *sync.Cond {
 	cv := &sync.Cond{}
 	t.Track(func(pod *v1.Pod) (stop bool) {
-		phase := pod.Status.Phase
-		logger.Infof("Tracking pod=%s phase=%s", t.podName, phase)
+		logger.Infof("Tracking pod=%s phase=%s", t.podName, pod.Status.Phase)
 
-		switch phase {
+		switch pod.Status.Phase {
 		case "Pending":
-
-			// Check all containers status in a pod. can't be ErrImagePull or ImagePullBackOff
+			// Check all containers status in a pod. when it failed to start we should stop tracking.
 			cslist := podutil.FindWaitingContainerStatuses(pod)
 			for _, cs := range cslist {
 				// Possible values are: PodInitializing, ErrImagePull, ImagePullBackOff
-				//
-				// -- FailedSync
-				// terminated:
-				//   reason=Completed,Error
-				// waiting:
-				//   reason=ImagePullBackOff, ErrImagePull
 				reason := cs.State.Waiting.Reason
-				if reason == "ErrImagePull" || reason == "ImagePullBackOff" {
+				switch reason {
+				case "PodInitializing", "ContainerCreating":
+					// Skip the standard states
+
+				case ErrImageInspect,
+					ErrImagePullBackOff,
+					ErrImagePull,
+					ErrImageNeverPull,
+					RegistryUnavailable,
+					ErrInvalidImageName:
 					logger.Errorf("Container %s is waiting. Reason=%s", cs.ContainerID, reason)
 
 					// stop tracking
