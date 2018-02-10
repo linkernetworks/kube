@@ -28,16 +28,16 @@ func (c *ProxyCache) setCacheAddress(conn *redis.Connection, cacheKey string, ad
 	return nil
 }
 
-func (c *ProxyCache) SetAddress(deploymentID string, address string) error {
+func (c *ProxyCache) SetAddress(docID string, address string) error {
 	conn := c.Redis.GetConnection()
-	cacheKey := c.Prefix + deploymentID
+	cacheKey := c.Prefix + docID
 	return c.setCacheAddress(conn, cacheKey, address)
 }
 
 // GetAddress uses the redis connection to get the address
-func (c *ProxyCache) GetAddress(deploymentID string, fetch AddressFetcher) (address string, err error) {
+func (c *ProxyCache) GetAddress(docID string, fetch AddressFetcher) (address string, err error) {
 	// Get the document and its pod info cache from redis
-	cacheKey := c.Prefix + deploymentID
+	cacheKey := c.Prefix + docID
 	conn := c.Redis.GetConnection()
 	address, err = conn.GetString(cacheKey)
 

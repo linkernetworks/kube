@@ -213,6 +213,9 @@ func (p *DocumentProxyInfoUpdater) SyncWithPod(doc SpawnableDocument, pod *v1.Po
 		return err
 	}
 
+	cache := NewProxyCache(p.Redis, 60*10)
+	cache.SetAddress(doc.GetID().Hex(), backend.Addr())
+
 	p.emit(doc, doc.NewUpdateEvent(bson.M{
 		"backend":           backend,
 		"backend.connected": pod.Status.PodIP != "",
