@@ -232,7 +232,7 @@ func (p *DocumentProxyInfoUpdater) emit(doc SpawnableDocument, e *event.RecordEv
 func NewProxyBackendFromPod(pod *v1.Pod, port int32) *entity.ProxyBackend {
 	return &entity.ProxyBackend{
 		Connected: pod.Status.PodIP != "",
-		IP:        pod.Status.PodIP,
+		Host:      pod.Status.PodIP,
 		Port:      int(port),
 	}
 }
