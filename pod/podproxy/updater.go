@@ -1,6 +1,7 @@
 package podproxy
 
 import (
+	"errors"
 	"fmt"
 
 	"bitbucket.org/linkernetworks/aurora/src/entity"
@@ -22,6 +23,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+var ErrPortNotFound = errors.New("Container port not found.")
 
 type ProxyInfoProvider interface {
 	Host() string
@@ -191,7 +194,7 @@ func (u *DocumentProxyInfoUpdater) Reset(doc SpawnableDocument, kerr error) (err
 // SyncWith updates the given document's "backend" and "pod" field by the given
 // pod object.
 func (p *DocumentProxyInfoUpdater) SyncWithPod(doc SpawnableDocument, pod *v1.Pod) (err error) {
-	backend, err := NewProxyBackendFromPodStatus(pod, p.PortName)
+	backend, err := NewProxyBackendFromPod(pod, p.PortName)
 	if err != nil {
 		return err
 	}
@@ -209,6 +212,7 @@ func (p *DocumentProxyInfoUpdater) SyncWithPod(doc SpawnableDocument, pod *v1.Po
 	}
 
 	p.emit(doc, doc.NewUpdateEvent(bson.M{
+		"backend":           backend,
 		"backend.connected": pod.Status.PodIP != "",
 		"pod.phase":         pod.Status.Phase,
 		"pod.message":       pod.Status.Message,
@@ -222,28 +226,12 @@ func (p *DocumentProxyInfoUpdater) emit(doc SpawnableDocument, e *event.RecordEv
 	go p.Redis.PublishAndSetJSON(doc.Topic(), e)
 }
 
-// SelectPodContainerPort selects the container port from the given port by the port name
-// This method is called by NewProxyBackendFromPodStatus
 // TODO: can be moved to kubernetes/pod/util
-func SelectPodContainerPort(pod *v1.Pod, portname string) (containerPort int32, found bool) {
-	for _, container := range pod.Spec.Containers {
-		for _, port := range container.Ports {
-			if port.Name == portname {
-				containerPort = port.ContainerPort
-				found = true
-				return
-			}
-		}
-	}
-	return containerPort, found
-}
-
-// TODO: can be moved to kubernetes/pod/util
-// NewProxyBackendFromPodStatus creates the proxy backend struct from the pod object.
-func NewProxyBackendFromPodStatus(pod *v1.Pod, portname string) (*entity.ProxyBackend, error) {
-	port, ok := SelectPodContainerPort(pod, portname)
+// NewProxyBackendFromPod creates the proxy backend struct from the pod object.
+func NewProxyBackendFromPod(pod *v1.Pod, portname string) (*entity.ProxyBackend, error) {
+	port, ok := podutil.FindContainerPort(pod, portname)
 	if !ok {
-		return nil, fmt.Errorf("portname %s not found", portname)
+		return nil, ErrPortNotFound
 	}
 	return &entity.ProxyBackend{
 		IP:        pod.Status.PodIP,
