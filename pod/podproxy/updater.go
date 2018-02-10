@@ -2,7 +2,6 @@ package podproxy
 
 import (
 	"errors"
-	"fmt"
 
 	"bitbucket.org/linkernetworks/aurora/src/entity"
 	"bitbucket.org/linkernetworks/aurora/src/event"
@@ -194,10 +193,13 @@ func (u *DocumentProxyInfoUpdater) Reset(doc SpawnableDocument, kerr error) (err
 // SyncWith updates the given document's "backend" and "pod" field by the given
 // pod object.
 func (p *DocumentProxyInfoUpdater) SyncWithPod(doc SpawnableDocument, pod *v1.Pod) (err error) {
-	backend, err := NewProxyBackendFromPod(pod, p.PortName)
-	if err != nil {
-		return err
+
+	port, ok := podutil.FindContainerPort(pod, p.PortName)
+	if !ok {
+		return ErrPortNotFound
 	}
+
+	backend := NewProxyBackendFromPod(pod, port)
 
 	q := bson.M{"_id": doc.GetID()}
 	m := bson.M{
@@ -226,16 +228,11 @@ func (p *DocumentProxyInfoUpdater) emit(doc SpawnableDocument, e *event.RecordEv
 	go p.Redis.PublishAndSetJSON(doc.Topic(), e)
 }
 
-// TODO: can be moved to kubernetes/pod/util
 // NewProxyBackendFromPod creates the proxy backend struct from the pod object.
-func NewProxyBackendFromPod(pod *v1.Pod, portname string) (*entity.ProxyBackend, error) {
-	port, ok := podutil.FindContainerPort(pod, portname)
-	if !ok {
-		return nil, ErrPortNotFound
-	}
+func NewProxyBackendFromPod(pod *v1.Pod, port int32) *entity.ProxyBackend {
 	return &entity.ProxyBackend{
+		Connected: pod.Status.PodIP != "",
 		IP:        pod.Status.PodIP,
 		Port:      int(port),
-		Connected: pod.Status.PodIP != "",
-	}, nil
+	}
 }
