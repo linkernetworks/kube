@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
+	// api "k8s.io/kubernetes/pkg/apis/core"
 )
 
 const ErrImagePullBackOff = "ImagePullBackOff"
@@ -57,7 +58,7 @@ func (t *PodTracker) WaitFor(waitPhase v1.PodPhase) *sync.Cond {
 		logger.Infof("Tracking pod=%s phase=%s", t.podName, pod.Status.Phase)
 
 		switch pod.Status.Phase {
-		case "Pending":
+		case v1.PodPending:
 			// Check all containers status in a pod. when it failed to start we should stop tracking.
 			cslist := podutil.FindWaitingContainerStatuses(pod)
 			for _, cs := range cslist {
@@ -83,7 +84,7 @@ func (t *PodTracker) WaitFor(waitPhase v1.PodPhase) *sync.Cond {
 
 		// Stop the tracker if the status is completion status.
 		// Terminating won't be catched
-		case "Running", "Failed", "Succeeded", "Unknown", "Terminating":
+		case v1.PodRunning, v1.PodFailed, v1.PodSucceeded, v1.PodUnknown:
 			stop = true
 			return stop
 		}
