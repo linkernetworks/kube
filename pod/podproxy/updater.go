@@ -99,9 +99,9 @@ func (u *DocumentProxyInfoUpdater) getPod(doc SpawnableDocument) (*v1.Pod, error
 func (u *DocumentProxyInfoUpdater) TrackAndSync(doc SpawnableDocument) (*podtracker.PodTracker, error) {
 	podName := doc.DeploymentID()
 
-	podTracker := podtracker.New(u.Clientset, u.Namespace, podName)
+	tracker := podtracker.New(u.Clientset, u.Namespace, podName)
 
-	podTracker.Track(func(pod *v1.Pod) (stop bool) {
+	tracker.Track(func(pod *v1.Pod) (stop bool) {
 		phase := pod.Status.Phase
 		logger.Infof("Tracking notebook pod=%s phase=%s", podName, phase)
 
@@ -148,7 +148,7 @@ func (u *DocumentProxyInfoUpdater) TrackAndSync(doc SpawnableDocument) (*podtrac
 		stop = false
 		return stop
 	})
-	return podTracker, nil
+	return tracker, nil
 }
 
 func (u *DocumentProxyInfoUpdater) Sync(doc SpawnableDocument) error {
