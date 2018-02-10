@@ -11,8 +11,6 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
-
-	"k8s.io/kubernetes/pkg/kubelet/images"
 )
 
 type PodTracker struct {
@@ -53,12 +51,12 @@ func (t *PodTracker) WaitFor(waitPhase v1.PodPhase) *sync.Cond {
 					// Skip the standard states
 					logger.Infof("Container %s state is %s", cs.ContainerID, reason)
 
-				case images.ErrImageInspect.Error(),
-					images.ErrImagePullBackOff.Error(),
-					images.ErrImagePull.Error(),
-					images.ErrImageNeverPull.Error(),
-					images.RegistryUnavailable.Error(),
-					images.ErrInvalidImageName.Error():
+				case "ErrImageInspect",
+					"ErrImagePullBackOff",
+					"ErrImagePull",
+					"ErrImageNeverPull",
+					"RegistryUnavailable",
+					"ErrInvalidImageName":
 					logger.Errorf("Container %s is waiting. Reason=%s", cs.ContainerID, reason)
 
 					// stop tracking

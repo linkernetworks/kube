@@ -21,7 +21,6 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/kubernetes/pkg/kubelet/images"
 )
 
 type ProxyInfoProvider interface {
@@ -117,12 +116,12 @@ func (u *DocumentProxyInfoUpdater) TrackAndSync(doc SpawnableDocument) (*podtrac
 					// Skip the standard states
 					logger.Infof("Container %s state is %s", cs.ContainerID, reason)
 
-				case images.ErrImageInspect.Error(),
-					images.ErrImagePullBackOff.Error(),
-					images.ErrImagePull.Error(),
-					images.ErrImageNeverPull.Error(),
-					images.RegistryUnavailable.Error(),
-					images.ErrInvalidImageName.Error():
+				case "ErrImageInspect",
+					"ErrImagePullBackOff",
+					"ErrImagePull",
+					"ErrImageNeverPull",
+					"RegistryUnavailable",
+					"ErrInvalidImageName":
 					logger.Errorf("Container %s is waiting. Reason=%s", cs.ContainerID, reason)
 
 					// stop tracking
