@@ -114,7 +114,11 @@ func (k *Server) StartSubscription(subscription Subscription) error {
 
 func (k *Server) QueryNumSubscribers(s Subscription) (int, error) {
 	topic := s.Topic()
-	nums, err := k.redisService.GetNumSub(topic)
+
+	c := k.redisService.GetConnection()
+	defer c.Close()
+	nums, err := c.PubSub().NumSub(topic)
+
 	if err != nil {
 		return -1, err
 	}
