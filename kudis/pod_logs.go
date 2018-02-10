@@ -23,7 +23,8 @@ type PodLogSubscription struct {
 
 	tailLines int64
 
-	logStream deployment.ContainerLogStream
+	stream  deployment.ContainerLogStream
+	watcher deployment.Watcher
 }
 
 func NewPodLogSubscription(rds *redis.Service, target string, dt deployment.DeploymentTarget, podName string, containerName string, tl int64) *PodLogSubscription {
@@ -75,26 +76,28 @@ func (s *PodLogSubscription) Start() error {
 		return err
 	}
 
-	s.logStream = watcher.C
+	s.stream = watcher.C
+	s.watcher = watcher
 	s.running = true
 
-	go s.stream()
+	go s.startStream()
 	return nil
 }
 
-func (s *PodLogSubscription) stream() {
-	logC := s.logStream
-	topic := s.Topic()
+func (s *PodLogSubscription) startStream() {
+	var topic = s.Topic()
+	var conn = s.redis.GetConnection()
 STREAM:
 	for {
 		select {
 		case <-s.stop:
-			// FIXME: close the reader
+			s.watcher.Stop()
+			// FIXME: find a way to close the reader
 			break STREAM
-		case lc, ok := <-logC:
+		case lc, ok := <-s.stream:
 			if ok {
 				// publish to redis with the topic
-				s.redis.PublishAndSetJSON(topic, s.newEvent(lc.Line))
+				conn.PublishAndSetJSON(topic, s.newEvent(lc.Line))
 			} else {
 				// receive log EOF
 				logger.Infof("topic:%s EOF", topic)

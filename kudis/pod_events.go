@@ -48,7 +48,7 @@ func (s *PodEventSubscription) Start() error {
 	var dt = s.DeploymentTarget.(*deployment.KubeDeploymentTarget)
 	s.running = true
 	s.watcher = dt.WatchPodEvents(s.PodName)
-	go s.stream()
+	go s.startStream()
 	return nil
 }
 
@@ -70,17 +70,19 @@ func (p *PodEventSubscription) newEvent(e *v1.Event) *event.RecordEvent {
 	}
 }
 
-func (s *PodEventSubscription) stream() {
+func (s *PodEventSubscription) startStream() {
+	var conn = s.redis.GetConnection()
 	var topic = s.Topic()
 STREAM:
 	for {
 		select {
 		case <-s.stop:
+			s.watcher.Stop()
 			break STREAM
 		case e, ok := <-s.watcher.C:
 			if ok {
 				// publish to redis with the topic
-				s.redis.PublishAndSetJSON(topic, s.newEvent(e))
+				conn.PublishAndSetJSON(topic, s.newEvent(e))
 			} else {
 				break STREAM
 			}
