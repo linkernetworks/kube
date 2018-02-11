@@ -2,6 +2,7 @@ package kudis
 
 import (
 	"fmt"
+	"time"
 
 	"bitbucket.org/linkernetworks/aurora/src/deployment"
 	"bitbucket.org/linkernetworks/aurora/src/event"
@@ -73,9 +74,13 @@ func (p *PodEventSubscription) newEvent(e *v1.Event) *event.RecordEvent {
 func (s *PodEventSubscription) startStream() {
 	var topic = s.Topic()
 
-	// TODO: keep-alive
 	var conn = s.redis.GetConnection()
 	defer conn.Close()
+
+	// due to the defer order, the keepalive will be stopped first before the
+	// connection is closed.
+	var keepalive = conn.KeepAlive(10 * time.Second)
+	defer keepalive.Stop()
 STREAM:
 	for {
 		select {

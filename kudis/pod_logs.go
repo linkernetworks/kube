@@ -2,6 +2,7 @@ package kudis
 
 import (
 	"fmt"
+	"time"
 
 	"bitbucket.org/linkernetworks/aurora/src/deployment"
 	dtypes "bitbucket.org/linkernetworks/aurora/src/deployment/types"
@@ -88,12 +89,16 @@ func (s *PodLogSubscription) startStream() {
 	var topic = s.Topic()
 	var conn = s.redis.GetConnection()
 	defer conn.Close()
+
+	// due to the defer order, the keepalive will be stopped first before the
+	// connection is closed.
+	var keepalive = conn.KeepAlive(10 * time.Second)
+	defer keepalive.Stop()
 STREAM:
 	for {
 		select {
 		case <-s.stop:
 			s.watcher.Stop()
-			// FIXME: find a way to close the reader
 			break STREAM
 		case lc, ok := <-s.stream:
 			if ok {
