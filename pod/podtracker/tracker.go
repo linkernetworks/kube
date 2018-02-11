@@ -26,7 +26,7 @@ func New(clientset *kubernetes.Clientset, namespace string, podName string) *Pod
 	return &PodTracker{clientset, namespace, podName, make(chan struct{})}
 }
 
-func matchPod(obj interface{}, podName string) (*v1.Pod, bool) {
+func matchPodName(obj interface{}, podName string) (*v1.Pod, bool) {
 	pod, ok := obj.(*v1.Pod)
 	if !ok {
 		return nil, false
@@ -81,14 +81,14 @@ func (t *PodTracker) WaitFor(waitPhase v1.PodPhase) *sync.Cond {
 func (t *PodTracker) Track(callback PodReceiver) {
 	_, controller := kubemon.WatchPods(t.clientset, t.namespace, fields.Everything(), cache.ResourceEventHandlerFuncs{
 		AddFunc: func(newObj interface{}) {
-			if pod, ok := matchPod(newObj, t.podName); ok {
+			if pod, ok := matchPodName(newObj, t.podName); ok {
 				if callback(pod) {
 					t.Stop()
 				}
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			if pod, ok := matchPod(newObj, t.podName); ok {
+			if pod, ok := matchPodName(newObj, t.podName); ok {
 				if callback(pod) {
 					t.Stop()
 				}
@@ -96,7 +96,7 @@ func (t *PodTracker) Track(callback PodReceiver) {
 		},
 
 		DeleteFunc: func(obj interface{}) {
-			if pod, ok := matchPod(obj, t.podName); ok {
+			if pod, ok := matchPodName(obj, t.podName); ok {
 				if callback(pod) {
 					t.Stop()
 				}
