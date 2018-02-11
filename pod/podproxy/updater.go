@@ -156,23 +156,22 @@ func (u *DocumentProxyInfoUpdater) Sync(doc SpawnableDocument) error {
 
 	if err != nil && kerrors.IsNotFound(err) {
 
-		return u.Reset(doc, nil)
+		return u.Reset(doc)
 
 	} else if err != nil {
 
-		u.Reset(doc, err)
+		u.Reset(doc)
 		return err
 	}
 
 	return u.SyncWithPod(doc, pod)
 }
 
-func (u *DocumentProxyInfoUpdater) Reset(doc SpawnableDocument, kerr error) (err error) {
+func (u *DocumentProxyInfoUpdater) Reset(doc SpawnableDocument) (err error) {
 	var q = bson.M{"_id": doc.GetID()}
 	var m = bson.M{
 		"$set": bson.M{
 			"backend.connected": false,
-			"backend.error":     kerr,
 		},
 		"$unset": bson.M{
 			"backend.host": nil,
