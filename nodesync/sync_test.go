@@ -2,6 +2,7 @@ package nodesync
 
 import (
 	"bitbucket.org/linkernetworks/aurora/src/config"
+	"bitbucket.org/linkernetworks/aurora/src/deployment"
 	"bitbucket.org/linkernetworks/aurora/src/service/kubernetes"
 	"bitbucket.org/linkernetworks/aurora/src/service/mongo"
 	"github.com/stretchr/testify/assert"
@@ -29,7 +30,8 @@ func TestNodeSync(t *testing.T) {
 	ms := mongo.New(cf.Mongo.Url)
 	assert.NotNil(t, ms)
 
-	nts := New(clientset, ms)
+	dt := deployment.NewKubeDeploymentTarget(clientset, "testing", nil)
+	nts := New(clientset, ms, dt)
 	assert.NotNil(t, nts)
 	signal := nts.Sync()
 
@@ -41,11 +43,6 @@ Watch:
 				break Watch
 			}
 		}
-	}
-
-	nodes := nts.FetchNodes()
-	if assert.NotEmpty(t, nodes) {
-		assert.NotNil(t, nodes[0])
 	}
 
 	nts.Stop()
@@ -66,5 +63,4 @@ func TestNodeInCluster(t *testing.T) {
 
 	b := nodeInCluster("gke-aurora-dev-notebook-pool-a7f99c3f-999", nodes)
 	assert.False(t, b)
-
 }

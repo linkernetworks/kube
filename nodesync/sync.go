@@ -1,9 +1,10 @@
 package nodesync
 
 import (
+	"bitbucket.org/linkernetworks/aurora/src/deployment"
+	dnodes "bitbucket.org/linkernetworks/aurora/src/deployment/nodes"
 	"bitbucket.org/linkernetworks/aurora/src/entity"
 	"bitbucket.org/linkernetworks/aurora/src/kubernetes/kubemon"
-	"bitbucket.org/linkernetworks/aurora/src/kubernetes/nvidia"
 	"bitbucket.org/linkernetworks/aurora/src/logger"
 	"bitbucket.org/linkernetworks/aurora/src/service/mongo"
 	"gopkg.in/mgo.v2/bson"
@@ -15,9 +16,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"time"
-
-	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
 type NodeStats struct {
@@ -26,12 +24,13 @@ type NodeStats struct {
 	Deleted int
 }
 
-type NodeCh chan entity.Node
+type NodeCh chan *dnodes.Node
 type Signal chan bool
 
 type NodeSync struct {
 	clientset *kubernetes.Clientset
-	context   *mongo.Session
+	session   *mongo.Session
+	dt        *deployment.KubeDeploymentTarget
 	updateC   NodeCh
 	deleteC   NodeCh
 	stop      chan struct{}
@@ -40,14 +39,25 @@ type NodeSync struct {
 	t         int
 }
 
-func New(clientset *kubernetes.Clientset, m *mongo.Service) *NodeSync {
-	stop := make(chan struct{})
-	signal := make(Signal, 1)
-	deleteC := make(NodeCh, 1)
-	updateC := make(NodeCh, 1)
+func New(clientset *kubernetes.Clientset, m *mongo.Service, dt *deployment.KubeDeploymentTarget) *NodeSync {
 	var stats NodeStats
+
 	t, _ := strconv.Atoi(os.Getenv("NODE_RESOURCE_PERIODIC"))
-	return &NodeSync{clientset, m.NewSession(), updateC, deleteC, stop, signal, stats, t}
+	if t == 0 {
+		t = 3
+	}
+
+	return &NodeSync{
+		clientset: clientset,
+		session:   m.NewSession(),
+		dt:        dt,
+		updateC:   make(NodeCh, 10),
+		deleteC:   make(NodeCh, 10),
+		stop:      make(chan struct{}),
+		signal:    make(Signal, 1),
+		stats:     stats,
+		t:         t,
+	}
 }
 
 func (nts *NodeSync) Sync() Signal {
@@ -59,13 +69,18 @@ func (nts *NodeSync) Sync() Signal {
 	// keep watch node change events
 	_, controller := kubemon.WatchNodes(nts.clientset, fields.Everything(), cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
+			ne := &dnodes.Node{}
 			n := obj.(*corev1.Node)
 			nts.stats.Added++
 
-			nodeEntity := LoadNodeEntity(n)
-			logger.Info("[Event] nodes state added")
+			ne.LoadMeta(n)
+			ne.LoadSystemInfo(n.Status.NodeInfo)
+			ne.LoadAllocatableResource(n.Status.Allocatable)
+			ne.LoadCapacityResource(n.Status.Capacity)
 
-			nts.updateC <- nodeEntity
+			logger.Infof("[Event] node %s added", ne.Name)
+
+			nts.updateC <- ne
 			select {
 			case nts.signal <- true:
 			}
@@ -74,30 +89,34 @@ func (nts *NodeSync) Sync() Signal {
 			n := obj.(*corev1.Node)
 			nts.stats.Deleted++
 
-			nodeEntity := LoadNodeEntity(n)
-			logger.Info("[Event] nodes state deleted")
+			logger.Infof("[Event] node %s deleted", n.Name)
 
-			nts.deleteC <- nodeEntity
+			nts.deleteC <- &dnodes.Node{Name: n.Name}
 			select {
 			case nts.signal <- true:
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
+			ne := &dnodes.Node{}
 			n := newObj.(*corev1.Node)
 			nts.stats.Updated++
 
-			nodeEntity := LoadNodeEntity(n)
-			logger.Info("[Event] nodes state updated")
+			ne.LoadMeta(n)
+			ne.LoadSystemInfo(n.Status.NodeInfo)
+			ne.LoadAllocatableResource(n.Status.Allocatable)
+			ne.LoadCapacityResource(n.Status.Capacity)
 
-			nts.updateC <- nodeEntity
+			logger.Infof("[Event] node %s updated", ne.Name)
+
+			nts.updateC <- ne
 			select {
 			case nts.signal <- true:
 			}
 		},
 	})
 	go controller.Run(nts.stop)
-	go nts.StartPrune()
-	go nts.ResourceUpdater()
+	go nts.NodeRoutine()
+	go nts.NodeEventHandler()
 	return nts.signal
 }
 
@@ -106,145 +125,88 @@ func (nts *NodeSync) Wait() {
 }
 
 func (nts *NodeSync) Stop() {
-	defer nts.context.Close()
 	var e struct{}
 	nts.stop <- e
 }
 
-func LoadNodeEntity(no *corev1.Node) entity.Node {
-	node := entity.Node{
-		Name:              no.GetName(),
-		ClusterName:       no.GetClusterName(),
-		CreationTimestamp: no.GetCreationTimestamp().Time,
-		Labels:            createLabelSlice(no.GetLabels()),
-		Allocatable: entity.Allocatable{
-			CPU:       no.Status.Allocatable.Cpu().MilliValue(),
-			Memory:    no.Status.Allocatable.Memory().Value(),
-			POD:       no.Status.Allocatable.Pods().Value(),
-			NvidiaGPU: nvidia.GetGPU(&no.Status.Allocatable).Value(),
-		},
-		Capacity: entity.Capacity{
-			CPU:       no.Status.Capacity.Cpu().MilliValue(),
-			Memory:    no.Status.Capacity.Memory().Value(),
-			POD:       no.Status.Capacity.Pods().Value(),
-			NvidiaGPU: nvidia.GetGPU(&no.Status.Capacity).Value(),
-		},
-		NodeInfo: entity.NodeSystemInfo{
-			MachineID:               no.Status.NodeInfo.MachineID,
-			KernelVersion:           no.Status.NodeInfo.KernelVersion,
-			OSImage:                 no.Status.NodeInfo.OSImage,
-			ContainerRuntimeVersion: no.Status.NodeInfo.ContainerRuntimeVersion,
-			KubeletVersion:          no.Status.NodeInfo.KubeletVersion,
-			OperatingSystem:         no.Status.NodeInfo.OperatingSystem,
-			Architecture:            no.Status.NodeInfo.Architecture,
-		},
-	}
-	for _, addr := range no.Status.Addresses {
-		switch addr.Type {
-		case "InternalIP":
-			node.InternalIP = addr.Address
-		case "ExternalIP":
-			node.ExternalIP = addr.Address
-		case "Hostname":
-			node.Hostname = addr.Address
-		}
-	}
-	return node
-}
-
-func UpdateResourceInfo(node *entity.Node, pods []corev1.Pod) {
-	var totalReqCPU, totalReqMem, totalReqGPU, totalReqPod int64
-	var totalLimCPU, totalLimMem, totalLimGPU, totalLimPod int64
-	for _, p := range pods {
-		for _, c := range p.Spec.Containers {
-			totalReqCPU += c.Resources.Requests.Cpu().MilliValue()
-			totalReqMem += c.Resources.Requests.Memory().Value()
-			totalReqGPU += nvidia.GetGPU(&c.Resources.Requests).Value()
-			totalReqPod += c.Resources.Requests.Pods().Value()
-
-			totalLimCPU += c.Resources.Limits.Cpu().MilliValue()
-			totalLimMem += c.Resources.Limits.Memory().Value()
-			totalLimGPU += nvidia.GetGPU(&c.Resources.Limits).Value()
-			totalLimPod += c.Resources.Limits.Pods().Value()
-		}
-	}
-	node.Requests.CPU = totalReqCPU
-	node.Requests.Memory = totalReqMem
-	node.Requests.NvidiaGPU = totalReqGPU
-	node.Requests.POD = totalReqPod
-
-	node.Limits.CPU = totalLimCPU
-	node.Limits.Memory = totalLimMem
-	node.Limits.NvidiaGPU = totalLimGPU
-	node.Limits.POD = totalLimPod
-}
-
-func (nts *NodeSync) UpsertNode(node *entity.Node) error {
+func (nts *NodeSync) UpsertNode(node *dnodes.Node) error {
 	update := bson.M{"$set": node}
 	q := bson.M{"name": node.Name}
 	// debug use showing log messages
-	// logger.Infof("%#v", node)
-	_, err := nts.context.C(entity.NodeCollectionName).Upsert(q, update)
+	logger.Infof("%#v", node)
+	_, err := nts.session.C(entity.NodeCollectionName).Upsert(q, update)
 	return err
 }
 
 func (nts *NodeSync) RemoveNodeByName(name string) error {
 	q := bson.M{"name": name}
-	return nts.context.C(entity.NodeCollectionName).Remove(q)
-}
-
-func (nts *NodeSync) FetchNodes() []corev1.Node {
-	var nodes []corev1.Node
-	nodeList, _ := kubemon.GetNodes(nts.clientset)
-	for _, no := range nodeList.Items {
-		nodes = append(nodes, no)
-	}
-	return nodes
-}
-
-func (nts *NodeSync) FetchPodsByNode(name string) []corev1.Pod {
-	var pods []corev1.Pod
-	podList, _ := kubemon.GetPods(nts.clientset, corev1.NamespaceAll)
-	for _, po := range podList.Items {
-		if (po.Status.Phase == "Pending" || po.Status.Phase == "Running") && po.Spec.NodeName == name {
-			pods = append(pods, po)
-		}
-	}
-	return pods
+	return nts.session.C(entity.NodeCollectionName).Remove(q)
 }
 
 func (nts *NodeSync) Prune() error {
 	var newNodeNames []string
-	nodesList := nts.FetchNodes()
+	var err error
+	nodesList, err := nts.dt.GetNodes()
+	if err != nil {
+		return err
+	}
 	for _, n := range nodesList {
 		newNodeNames = append(newNodeNames, n.Name)
 	}
-	nodes := []entity.Node{}
-	err := nts.context.C(entity.NodeCollectionName).Find(nil).Select(bson.M{"name": 1}).All(&nodes)
+	nodes := []dnodes.Node{}
+	err = nts.session.C(entity.NodeCollectionName).Find(nil).Select(bson.M{"name": 1}).All(&nodes)
 	if err != nil {
 		return err
 	}
 	// check mongodb record if node doesn't exist in current cluster than remove the record
 	for _, n := range nodes {
 		if !nodeInCluster(n.Name, newNodeNames) {
-			logger.Info("Pruning nodes...")
-			err := nts.context.C(entity.NodeCollectionName).Remove(bson.M{"name": n.Name})
-			if err != nil {
-				logger.Error("Pruning nodes error")
-				return err
-			}
+			logger.Info("Pruning node %s", n.Name)
+			nts.deleteC <- &dnodes.Node{Name: n.Name}
 		}
 	}
 	return nil
 }
 
-func (nts *NodeSync) StartPrune() {
-	logger.Infof("Node information prune periodic time is set to %d minutes", nts.t)
+func (nts *NodeSync) NodeRoutine() {
+	logger.Infof("Node routine periodic time is set to %d minutes", nts.t)
 	ticker := time.NewTicker(time.Duration(nts.t) * time.Minute)
 	for {
 		select {
 		case <-ticker.C:
+			// clean routine
 			nts.Prune()
+			// update routine
+			nodes, err := nts.dt.GetNodesResource()
+			logger.Infof("fetching all nodes. found %d nodes", len(nodes))
+			if err != nil {
+				logger.Errorf("Get nodes resources fail: %v", err)
+
+			}
+			for _, n := range nodes {
+				nts.updateC <- n
+			}
+
+		}
+	}
+
+}
+
+func (nts *NodeSync) NodeEventHandler() {
+	for {
+		select {
+		case ne := <-nts.updateC:
+			logger.Info("Receive a update event")
+			// fetch all active pods on a node
+			pods := nts.dt.FetchActivePodsByNode(ne.Name)
+
+			ne.UpdatePodsLimitResource(pods)
+			ne.UpdatePodsRequestResource(pods)
+
+			err := nts.UpsertNode(ne)
+			if err != nil {
+				logger.Error("Upsert node error:", err)
+			}
 		case ne := <-nts.deleteC:
 			logger.Info("Receive a delete event")
 			err := nts.RemoveNodeByName(ne.Name)
@@ -254,46 +216,6 @@ func (nts *NodeSync) StartPrune() {
 
 		}
 	}
-}
-
-func (nts *NodeSync) ResourceUpdater() {
-	logger.Infof("Pod resource update periodic time is set to %d minutes", nts.t)
-	ticker := time.NewTicker(time.Duration(nts.t) * time.Minute)
-	for {
-		select {
-		case <-ticker.C:
-			logger.Info("fetching all nodes")
-			nodes := nts.FetchNodes()
-			logger.Infof("found %d nodes", len(nodes))
-			for _, n := range nodes {
-				pods := nts.FetchPodsByNode(n.Name)
-				nodeEntity := LoadNodeEntity(&n)
-				UpdateResourceInfo(&nodeEntity, pods)
-				err := nts.UpsertNode(&nodeEntity)
-				if err != nil {
-					logger.Error("Upsert node error:", err)
-				}
-			}
-		case ne := <-nts.updateC:
-			logger.Info("Receive a node add/update event")
-			pods := nts.FetchPodsByNode(ne.Name)
-			UpdateResourceInfo(&ne, pods)
-			err := nts.UpsertNode(&ne)
-			if err != nil {
-				logger.Error("Upsert node error:", err)
-			}
-
-		}
-	}
-}
-
-func createLabelSlice(m map[string]string) []string {
-	s := make([]string, 0, len(m))
-	for k, v := range m {
-		l := k + "=" + v
-		s = append(s, l)
-	}
-	return s
 }
 
 func nodeInCluster(n string, list []string) bool {
