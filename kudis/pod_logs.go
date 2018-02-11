@@ -86,6 +86,8 @@ func (s *PodLogSubscription) Start() error {
 
 func (s *PodLogSubscription) startStream() {
 	var topic = s.Topic()
+	var conn = s.redis.GetConnection()
+	defer conn.Close()
 STREAM:
 	for {
 		select {
@@ -96,7 +98,6 @@ STREAM:
 		case lc, ok := <-s.stream:
 			if ok {
 				// publish to redis with the topic
-				var conn = s.redis.GetConnection()
 				conn.PublishAndSetJSON(topic, s.newEvent(lc.Line))
 			} else {
 				// receive log EOF

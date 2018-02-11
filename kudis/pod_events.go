@@ -72,6 +72,10 @@ func (p *PodEventSubscription) newEvent(e *v1.Event) *event.RecordEvent {
 
 func (s *PodEventSubscription) startStream() {
 	var topic = s.Topic()
+
+	// TODO: keep-alive
+	var conn = s.redis.GetConnection()
+	defer conn.Close()
 STREAM:
 	for {
 		select {
@@ -80,7 +84,6 @@ STREAM:
 			break STREAM
 		case e, ok := <-s.watcher.C:
 			if ok {
-				var conn = s.redis.GetConnection()
 				// publish to redis with the topic
 				conn.PublishAndSetJSON(topic, s.newEvent(e))
 			} else {

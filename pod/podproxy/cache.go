@@ -39,6 +39,7 @@ func (c *ProxyCache) GetAddress(docID string, fetch AddressFetcher) (address str
 	// Get the document and its pod info cache from redis
 	cacheKey := c.Prefix + docID
 	conn := c.Redis.GetConnection()
+	defer conn.Close()
 	address, err = conn.GetString(cacheKey)
 
 	if err == redigo.ErrNil {
