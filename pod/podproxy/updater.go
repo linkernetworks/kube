@@ -108,7 +108,7 @@ func (u *DocumentProxyInfoUpdater) TrackAndSync(doc SpawnableDocument) (*podtrac
 		switch phase {
 		case v1.PodPending:
 			if err := u.SyncWithPod(doc, pod); err != nil {
-				logger.Errorf("Failed to sync document: error=%v", err)
+				logger.Errorf("Failed to sync document: pod=%s doc=%s error=%v", podName, doc.GetID().Hex(), err)
 			}
 
 			// Check all containers status in a pod. can't be ErrImagePull or ImagePullBackOff
@@ -138,7 +138,7 @@ func (u *DocumentProxyInfoUpdater) TrackAndSync(doc SpawnableDocument) (*podtrac
 		// Terminating won't be catched
 		case v1.PodRunning, v1.PodFailed, v1.PodSucceeded, v1.PodUnknown:
 			if err := u.SyncWithPod(doc, pod); err != nil {
-				logger.Errorf("Failed to sync document: error=%v", err)
+				logger.Errorf("Failed to sync document: pod=%s doc=%s error=%v", podName, doc.GetID().Hex(), err)
 			}
 
 			stop = true
