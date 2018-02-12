@@ -103,7 +103,7 @@ func (u *DocumentProxyInfoUpdater) TrackAndSync(doc SpawnableDocument) (*podtrac
 
 	tracker.Track(func(pod *v1.Pod) (stop bool) {
 		phase := pod.Status.Phase
-		logger.Infof("tracking notebook: doc=%s pod=%s phase=%s", doc.GetID().Hex(), podName, phase)
+		logger.Infof("tracking %s: doc=%s pod=%s phase=%s", doc.Topic(), doc.GetID().Hex(), podName, phase)
 
 		switch phase {
 		case v1.PodPending:
