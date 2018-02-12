@@ -4,7 +4,6 @@ import (
 	"sync"
 
 	"bitbucket.org/linkernetworks/aurora/src/kubernetes/kubemon"
-	"bitbucket.org/linkernetworks/aurora/src/kubernetes/pod/podutil"
 	"bitbucket.org/linkernetworks/aurora/src/logger"
 
 	v1 "k8s.io/api/core/v1"
