@@ -38,7 +38,7 @@ func matchPodName(obj interface{}, podName string) (*v1.Pod, bool) {
 func (t *PodTracker) WaitFor(waitPhase v1.PodPhase) *sync.Cond {
 	cv := &sync.Cond{}
 	t.Track(func(pod *v1.Pod) (stop bool) {
-		logger.Infof("Wait for pod=%s phase=%s wait=%s", t.podName, pod.Status.Phase)ci, waitPhase)
+		logger.Infof("Wait for pod=%s phase=%s wait=%s", t.podName, pod.Status.Phase, waitPhase)
 		if waitPhase == pod.Status.Phase {
 			cv.Signal()
 			stop = true
