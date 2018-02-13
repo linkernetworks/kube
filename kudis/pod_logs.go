@@ -2,6 +2,7 @@ package kudis
 
 import (
 	"fmt"
+	"regexp"
 	"time"
 
 	"bitbucket.org/linkernetworks/aurora/src/deployment"
@@ -10,6 +11,8 @@ import (
 	"bitbucket.org/linkernetworks/aurora/src/logger"
 	"bitbucket.org/linkernetworks/aurora/src/service/redis"
 )
+
+var PodLogRegExp = regexp.MustCompile("target:(?P<Target>[a-z_-]+):pod:(?P<Pod>[a-z_-]+):container:(?P<Container>[a-z_-]+):logs")
 
 type PodLogSubscription struct {
 	redis            *redis.Service
@@ -42,6 +45,10 @@ func NewPodLogSubscription(rds *redis.Service, target string, dt deployment.Depl
 
 func (s *PodLogSubscription) IsRunning() bool {
 	return s.running
+}
+
+func (s *PodLogSubscription) Regexp() *regexp.Regexp {
+	return PodLogRegExp
 }
 
 func (s *PodLogSubscription) Topic() string {

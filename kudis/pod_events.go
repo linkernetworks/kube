@@ -2,6 +2,7 @@ package kudis
 
 import (
 	"fmt"
+	"regexp"
 	"time"
 
 	"bitbucket.org/linkernetworks/aurora/src/deployment"
@@ -10,6 +11,8 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 )
+
+var PodEventRegExp = regexp.MustCompile("target:(?P<Target>[a-z_-]+):pod:(?P<Pod>[a-z_-]+):events")
 
 type PodEventSubscription struct {
 	redis   *redis.Service
@@ -34,6 +37,10 @@ func NewPodEventSubscription(rds *redis.Service, target string, dt deployment.De
 
 func (s *PodEventSubscription) Topic() string {
 	return fmt.Sprintf("target:%s:pod:%s:events", s.Target, s.PodName)
+}
+
+func (s *PodEventSubscription) Regexp() *regexp.Regexp {
+	return PodEventRegExp
 }
 
 func (s *PodEventSubscription) IsRunning() bool {
