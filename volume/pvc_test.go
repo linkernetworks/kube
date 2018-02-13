@@ -9,15 +9,18 @@ import (
 	"testing"
 )
 
-const pvcName = "testing"
-const namespace = "default"
+const (
+	testingConfigPath = "../../../config/testing.json"
+	pvcName           = "testing"
+	namespace         = "default"
+)
 
 func TestCreatePersistentVolumeClaim(t *testing.T) {
 	if _, defined := os.LookupEnv("TEST_K8S"); !defined {
 		t.SkipNow()
 		return
 	}
-	cf := config.MustRead("../../config/testing.json")
+	cf := config.MustRead(testingConfigPath)
 	ksvc := k8ssvc.NewFromConfig(cf.Kubernetes)
 	clientset, err := ksvc.CreateClientset()
 	assert.NoError(t, err)
@@ -38,7 +41,7 @@ func TestGetPersistentVolumeClaim(t *testing.T) {
 		t.SkipNow()
 		return
 	}
-	cf := config.MustRead("../../config/testing.json")
+	cf := config.MustRead(testingConfigPath)
 	ksvc := k8ssvc.NewFromConfig(cf.Kubernetes)
 	clientset, err := ksvc.CreateClientset()
 	assert.NoError(t, err)
@@ -54,7 +57,7 @@ func TestDeletePersistentVolumeClaim(t *testing.T) {
 		t.SkipNow()
 		return
 	}
-	cf := config.MustRead("../../config/testing.json")
+	cf := config.MustRead(testingConfigPath)
 	ksvc := k8ssvc.NewFromConfig(cf.Kubernetes)
 	clientset, err := ksvc.CreateClientset()
 	assert.NoError(t, err)
