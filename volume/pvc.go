@@ -8,7 +8,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func GetKubePVC(pvc entity.PersistentVolumeClaimParameter) (*v1.PersistentVolumeClaim, error) {
+func NewKubePVC(pvc entity.PersistentVolumeClaimParameter) (*v1.PersistentVolumeClaim, error) {
 	reList := make(v1.ResourceList)
 
 	storage, err := resource.ParseQuantity(pvc.Capacity)
@@ -40,7 +40,7 @@ func GetKubePVC(pvc entity.PersistentVolumeClaimParameter) (*v1.PersistentVolume
 }
 
 func CreatePVC(clientset *kubernetes.Clientset, pvc entity.PersistentVolumeClaimParameter, namespace string) error {
-	kubePVC, err := GetKubePVC(pvc)
+	kubePVC, err := NewKubePVC(pvc)
 	if err != nil {
 		return err
 	}
