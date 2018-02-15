@@ -31,11 +31,16 @@ func TestQueryNodeGPUUsage(t *testing.T) {
 	assert.NoError(t, err)
 
 	// create deployment target (pass kubernetes clientset)
-	dt := deployment.NewKubeDeploymentTarget(clientset, "testing", nil)
+	dt := deployment.KubeDeploymentTarget{
+		Clientset: clientset,
+		Namespace: "testing",
+		Redis:     nil,
+	}
+
 	nodes, err := dt.GetNodes()
 	assert.NoError(t, err)
 	assert.True(t, len(nodes) > 0)
 
-	usage := QueryNodeGPUUsage(dt, nodes[0].Name)
+	usage := QueryNodeGPUUsage(&dt, nodes[0].Name)
 	assert.NotNil(t, usage)
 }

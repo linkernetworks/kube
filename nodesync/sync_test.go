@@ -30,8 +30,12 @@ func TestNodeSync(t *testing.T) {
 	ms := mongo.New(cf.Mongo.Url)
 	assert.NotNil(t, ms)
 
-	dt := deployment.NewKubeDeploymentTarget(clientset, "testing", nil)
-	nts := New(clientset, ms, dt)
+	dt := deployment.KubeDeploymentTarget{
+		Clientset: clientset,
+		Namespace: "testing",
+		Redis:     nil,
+	}
+	nts := New(clientset, ms, &dt)
 	assert.NotNil(t, nts)
 	signal := nts.Sync()
 
