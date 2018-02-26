@@ -1,4 +1,4 @@
-package volume
+package volumes
 
 import (
 	"bitbucket.org/linkernetworks/aurora/src/entity"
