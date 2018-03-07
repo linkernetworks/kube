@@ -47,7 +47,7 @@ func (c *ProxyCache) GetAddress(docID string, fetch AddressFetcher) (address str
 		if err != nil {
 			return "", err
 		}
-		if err := c.setCacheAddress(conn, cacheKey, address); err != nil {
+		if err := c.setCacheAddress(conn, cacheKey, retaddr); err != nil {
 			return "", err
 		}
 		return retaddr, nil
