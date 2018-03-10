@@ -84,6 +84,10 @@ func (s *PodLogSubscription) Start() error {
 		return err
 	}
 
+	// start the log watcher
+	if err := watcher.Start(); err != nil {
+		return err
+	}
 	s.stream = watcher.C
 	s.watcher = watcher
 	s.running = true
@@ -106,6 +110,7 @@ STREAM:
 		select {
 		case <-s.stop:
 			s.watcher.Stop()
+			logger.Infof("Receive the stop signal. Stop the log watcher.")
 			break STREAM
 		case lc, ok := <-s.stream:
 			if ok {
