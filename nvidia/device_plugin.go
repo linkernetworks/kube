@@ -1,9 +1,10 @@
 package nvidia
 
 import (
+	"log"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"log"
 )
 
 const DevicePluginNvidiaGPU corev1.ResourceName = "nvidia.com/gpu"
