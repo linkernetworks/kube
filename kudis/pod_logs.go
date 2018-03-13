@@ -12,7 +12,7 @@ import (
 	"bitbucket.org/linkernetworks/aurora/src/service/redis"
 )
 
-var PodLogRegExp = regexp.MustCompile("target:(?P<Target>[a-z_-]+):pod:(?P<Pod>[a-z_-]+):container:(?P<Container>[a-z_-]+):logs")
+var PodLogRegExp = regexp.MustCompile("target:(?P<Target>[a-z_-]+):pod:(?P<Pod>[a-z0-9_-]+):container:(?P<Container>[a-z0-9_-]+):logs")
 
 type PodLogSubscription struct {
 	redis            *redis.Service
