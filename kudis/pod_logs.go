@@ -13,6 +13,7 @@ import (
 )
 
 var PodLogRegExp = regexp.MustCompile("target:(?P<Target>[a-z_-]+):pod:(?P<Pod>[a-z0-9_-]+):container:(?P<Container>[a-z0-9_-]+):logs")
+var JobLogRegExp = regexp.MustCompile("job:(?P<Job>[a-z0-9_-]+):container:(?P<Container>[a-z0-9_-]+):logs")
 
 type PodLogSubscription struct {
 	redis            *redis.Service
