@@ -26,7 +26,7 @@ func TestCleanUp(t *testing.T) {
 	dt, err := server.GetDeploymentTarget("default")
 	assert.NoError(t, err)
 
-	var subscription Subscription = NewPodLogSubscription(rds, "default", dt, "mongo-0", "mongo-sidecar", 10)
+	var subscription Subscription = NewPodLogSubscription(rds, "default", "pod", dt, "mongo-0", "mongo-sidecar", 10)
 	assert.NotNil(t, subscription)
 
 	success, reason, err := server.Subscribe(subscription)
@@ -56,7 +56,7 @@ func TestSubscribePodLogs(t *testing.T) {
 	dt, err := server.GetDeploymentTarget("default")
 	assert.NoError(t, err)
 
-	var subscription Subscription = NewPodLogSubscription(rds, "default", dt, "mongo-0", "mongo", 10)
+	var subscription Subscription = NewPodLogSubscription(rds, "default", "pod", dt, "mongo-0", "mongo", 10)
 	assert.NotNil(t, subscription)
 
 	success, reason, err := server.Subscribe(subscription)

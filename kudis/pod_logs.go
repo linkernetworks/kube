@@ -68,7 +68,7 @@ func (s *PodLogSubscription) Topic() string {
 }
 
 func (p *PodLogSubscription) newEvent(text string) *event.RecordEvent {
-	doc := []string{p.Kind, "container", "log"}
+	doc := []string{p.Kind, "container", "logs"}
 	return &event.RecordEvent{
 		Type: "record.insert",
 		Insert: &event.RecordInsertEvent{
