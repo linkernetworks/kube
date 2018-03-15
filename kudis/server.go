@@ -69,7 +69,8 @@ func (k *Server) SubscribePodLogs(ctx context.Context, req *pb.PodLogSubscriptio
 	}
 
 	var subscription Subscription = NewPodLogSubscription(
-		k.redisService, target, dt,
+		k.redisService, target,
+		req.GetKind(), dt,
 		req.GetPodName(),
 		req.GetContainerName(),
 		req.GetTailLines(),

@@ -16,11 +16,13 @@ message PodEventSubscriptionRequest {
 
 // only use in SubscribePodLogs for subscribing a pod logs
 message PodLogSubscriptionRequest {
+    // kind can be pod or job
+    string Kind = 1;
     // target is the namespace of the cluster
-    string Target = 1;
-    string PodName = 2;
-    string ContainerName = 3;
-    int64 TailLines = 4;
+    string Target = 2;
+    string PodName = 3;
+    string ContainerName = 4;
+    int64 TailLines = 5;
 }
 
 message SubscriptionResponse {

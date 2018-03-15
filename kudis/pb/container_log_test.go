@@ -10,6 +10,7 @@ import (
 func TestUnmarshalPodLogSubscriptionRequestJSON(t *testing.T) {
 	c := `
 	{
+		"Kind": "pod",
 		"Target": "default",
 		"ContainerName": "john-container",
 		"PodName": "john-pod-id",
