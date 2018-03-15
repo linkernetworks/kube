@@ -32,3 +32,45 @@ func TestPodSubscriptionNewUpdateEvent(t *testing.T) {
 	assert.Equal(t, "johnlin", pEvent.Insert.Record["container"])
 	assert.Equal(t, message, pEvent.Insert.Record["log"])
 }
+
+func TestMatchRegexpPodLog(t *testing.T) {
+	errorMatchPodLogTopicArray := []string{
+		"target:default:container:nodesync:logs",
+		"pod:nodesync-54d4995cdc-xt44h:container:nodesync:logs",
+	}
+
+	correctMatchPodLogTopicArray := []string{
+		"target:default:pod:nodesync-54d4995cdc-xt44h:container:nodesync:logs",
+	}
+
+	for _, e := range errorMatchPodLogTopicArray {
+		m := PodLogRegExp.MatchString(e)
+		assert.False(t, m)
+	}
+
+	for _, c := range correctMatchPodLogTopicArray {
+		m := PodLogRegExp.MatchString(c)
+		assert.True(t, m)
+	}
+}
+
+func TestMatchRegexpPodLog(t *testing.T) {
+	errorMatchPodLogTopicArray := []string{
+		"target:default:container:nodesync:logs",
+		"pod:nodesync-54d4995cdc-xt44h:container:nodesync:logs",
+	}
+
+	correctMatchPodLogTopicArray := []string{
+		"target:default:pod:nodesync-54d4995cdc-xt44h:container:nodesync:logs",
+	}
+
+	for _, e := range errorMatchPodLogTopicArray {
+		m := PodLogRegExp.MatchString(e)
+		assert.False(t, m)
+	}
+
+	for _, c := range correctMatchPodLogTopicArray {
+		m := PodLogRegExp.MatchString(c)
+		assert.True(t, m)
+	}
+}
