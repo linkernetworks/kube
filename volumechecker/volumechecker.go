@@ -40,7 +40,7 @@ func NewVolumeMount(containerVolumes []container.Volume) []v1.VolumeMount {
 	return mounts
 }
 
-func NewAvailablePod(id string, volume []container.Volume) v1.Pod {
+func NewVolumeCheckPod(id string, volume []container.Volume) v1.Pod {
 	volumes := NewVolume(volume)
 	volumeMounts := NewVolumeMount(volume)
 	name := PrefixPodName + id
@@ -70,7 +70,7 @@ func NewAvailablePod(id string, volume []container.Volume) v1.Pod {
 	}
 
 */
-func WaitAvailiablePod(ch chan *v1.Pod, podName string, timeout int) error {
+func Check(ch chan *v1.Pod, podName string, timeout int) error {
 	//We return nil iff the POD's status is running within timeout seconds.
 	find := false
 	ticker := time.NewTicker(time.Duration(timeout) * time.Second)

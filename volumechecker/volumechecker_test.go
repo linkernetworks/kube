@@ -36,7 +36,7 @@ func TestMountSuccess(t *testing.T) {
 	id := bson.NewObjectId().Hex()
 	volume := []container.Volume{}
 	//Deploy a Check POD
-	pod := NewAvailablePod(id, volume)
+	pod := NewVolumeCheckPod(id, volume)
 	assert.NotNil(t, pod)
 
 	newPod, err := clientset.CoreV1().Pods(namespace).Create(&pod)
@@ -56,7 +56,7 @@ func TestMountSuccess(t *testing.T) {
 	})
 	go controller.Run(stop)
 
-	err = WaitAvailiablePod(o, newPod.ObjectMeta.Name, 20)
+	err = Check(o, newPod.ObjectMeta.Name, 20)
 	var e struct{}
 	stop <- e
 	assert.NoError(t, err)
@@ -85,7 +85,7 @@ func TestMountFail(t *testing.T) {
 		},
 	}
 	//Deploy a Check POD
-	pod := NewAvailablePod(id, volume)
+	pod := NewVolumeCheckPod(id, volume)
 	assert.NotNil(t, pod)
 
 	newPod, err := clientset.CoreV1().Pods(namespace).Create(&pod)
@@ -105,7 +105,7 @@ func TestMountFail(t *testing.T) {
 	})
 	go controller.Run(stop)
 
-	err = WaitAvailiablePod(o, newPod.ObjectMeta.Name, 10)
+	err = Check(o, newPod.ObjectMeta.Name, 10)
 	var e struct{}
 	stop <- e
 
