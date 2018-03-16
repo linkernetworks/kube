@@ -7,9 +7,6 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/cache"
 )
 
 const PrefixPodName = "fs-check-"
@@ -73,40 +70,26 @@ func NewAvailablePod(id string, volume []container.Volume) v1.Pod {
 	}
 
 */
-func WaitAvailiablePod(clientset *kubernetes.Clientset, namespace string, podName string, timeout int) error {
+func WaitAvailiablePod(ch chan *v1.Pod, podName string, timeout int) error {
 	//We return nil iff the POD's status is running within timeout seconds.
 	find := false
-	stop := make(chan struct{})
-	_, controller := kubemon.WatchPods(clientset, namespace, fields.Everything(), cache.ResourceEventHandlerFuncs{
-		UpdateFunc: func(oldObj, newObj interface{}) {
-			pod, ok := newObj.(*v1.Pod)
-			if !ok {
-				return
-			}
-
+	ticker := time.NewTicker(time.Duration(timeout) * time.Second)
+Watch:
+	for {
+		select {
+		case pod := <-ch:
 			if pod.ObjectMeta.Name != podName {
-				return
+				continue
 			}
 
 			if v1.PodRunning == pod.Status.Phase {
 				find = true
-				var e struct{}
-				stop <- e
+				break Watch
 			}
-		},
-	})
-	go controller.Run(stop)
-
-	//Wait the check unti the timeout
-	for i := 0; i < timeout; i++ {
-		if find {
-			break
+		case <-ticker.C:
+			break Watch
 		}
-		time.Sleep(1 * time.Second)
 	}
-
-	var e struct{}
-	stop <- e
 
 	if !find {
 		return ErrMountUnAvailable
