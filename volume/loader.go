@@ -15,6 +15,7 @@ func NewVolumes(defs []container.Volume) (volumes []v1.Volume) {
 			VolumeSource: v1.VolumeSource{
 				PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
 					ClaimName: def.ClaimName,
+					ReadOnly:  false,
 				},
 			},
 		})
