@@ -47,8 +47,8 @@ func (s *SocketIoTermSession) Connect(clientset *kubernetes.Clientset, restConfi
 		return err
 	}
 
+	s.attach()
 	s.Socket.Emit("term:connected")
-
 	return exec.Stream(remotecommand.StreamOptions{
 		Stdin:             s.Stdin,
 		Stdout:            s.Stdout,
