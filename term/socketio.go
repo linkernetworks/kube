@@ -2,7 +2,8 @@ package term
 
 import (
 	"io"
-	"log"
+
+	"bitbucket.org/linkernetworks/aurora/src/logger"
 
 	socketio "github.com/c9s/go-socket.io"
 )
@@ -33,7 +34,7 @@ func (w *SocketIoWriter) Write(p []byte) (n int, err error) {
 	data := string(p)
 	if err := w.Socket.Emit(w.Event, data); err != nil {
 		if err != io.EOF {
-			log.Println("emit error:", err)
+			logger.Errorf("term writer emit error: %v", err)
 		}
 		return 0, err
 	}
