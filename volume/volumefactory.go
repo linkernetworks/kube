@@ -10,7 +10,7 @@ import (
 type VolumeFactory struct {
 }
 
-func (n VolumeFactory) CreatePV(name string, capacity string, accessMode string, provider entity.VolumeProvider) (*v1.PersistentVolume, error) {
+func (n VolumeFactory) NewPV(name string, capacity string, accessMode string, provider entity.VolumeProvider) (*v1.PersistentVolume, error) {
 	reList := make(v1.ResourceList)
 
 	storage, err := resource.ParseQuantity(capacity)

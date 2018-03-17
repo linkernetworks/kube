@@ -6,5 +6,5 @@ import (
 )
 
 type PVFactory interface {
-	CreatePV(name string, capacity string, accessMode string, provider entity.VolumeProvider) (*v1.PersistentVolume, error)
+	NewPV(name string, capacity string, accessMode string, provider entity.VolumeProvider) (*v1.PersistentVolume, error)
 }
