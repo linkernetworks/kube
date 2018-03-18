@@ -8,14 +8,15 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func NewKubePVC(pvc entity.PersistentVolumeClaimParameter) (*v1.PersistentVolumeClaim, error) {
-	reList := make(v1.ResourceList)
+// NewPVC returns the kubernetes persistent volume claim object
+func NewPVC(pvc entity.PersistentVolumeClaimParameter) (*v1.PersistentVolumeClaim, error) {
+	resources := make(v1.ResourceList)
 
-	storage, err := resource.ParseQuantity(pvc.Capacity)
+	capacity, err := resource.ParseQuantity(pvc.Capacity)
 	if err != nil {
 		return nil, err
 	}
-	reList[v1.ResourceName("storage")] = storage
+	resources[v1.ResourceName("storage")] = capacity
 
 	return &v1.PersistentVolumeClaim{
 		TypeMeta: metav1.TypeMeta{
@@ -30,8 +31,8 @@ func NewKubePVC(pvc entity.PersistentVolumeClaimParameter) (*v1.PersistentVolume
 		},
 		Spec: v1.PersistentVolumeClaimSpec{
 			Resources: v1.ResourceRequirements{
-				Limits:   reList,
-				Requests: reList,
+				Limits:   resources,
+				Requests: resources,
 			},
 			AccessModes:      []v1.PersistentVolumeAccessMode{v1.PersistentVolumeAccessMode(pvc.AccessMode)},
 			StorageClassName: &pvc.StorageClass,
@@ -40,7 +41,7 @@ func NewKubePVC(pvc entity.PersistentVolumeClaimParameter) (*v1.PersistentVolume
 }
 
 func CreatePVC(clientset *kubernetes.Clientset, pvc entity.PersistentVolumeClaimParameter, namespace string) error {
-	kubePVC, err := NewKubePVC(pvc)
+	kubePVC, err := NewPVC(pvc)
 	if err != nil {
 		return err
 	}
@@ -56,7 +57,7 @@ func CreatePVC(clientset *kubernetes.Clientset, pvc entity.PersistentVolumeClaim
 func GetPVC(clientset *kubernetes.Clientset, name string, namespace string) (*v1.PersistentVolumeClaim, error) {
 	return clientset.CoreV1().PersistentVolumeClaims(namespace).Get(name, metav1.GetOptions{})
 }
+
 func DeletePVC(clientset *kubernetes.Clientset, name string, namespace string) error {
 	return clientset.CoreV1().PersistentVolumeClaims(namespace).Delete(name, &metav1.DeleteOptions{})
-
 }
