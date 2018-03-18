@@ -35,8 +35,9 @@ func TestCreatePersistentVolumeClaim(t *testing.T) {
 	pvc, err := NewPVC(params)
 	assert.NoError(t, err)
 
-	err = CreatePVC(clientset, namespace, pvc)
+	created, err := CreatePVC(clientset, namespace, pvc)
 	assert.NoError(t, err)
+	assert.NotNil(t, created)
 }
 
 func TestGetPersistentVolumeClaim(t *testing.T) {
