@@ -46,7 +46,7 @@ func TestGetPersistentVolumeClaim(t *testing.T) {
 	clientset, err := ksvc.NewClientset()
 	assert.NoError(t, err)
 
-	pvc, err := GetPVC(clientset, pvcName, namespace)
+	pvc, err := GetPVC(clientset, namespace, pvcName)
 	assert.NoError(t, err)
 	assert.NotNil(t, pvc)
 	assert.Equal(t, pvcName, pvc.Name)
@@ -62,6 +62,6 @@ func TestDeletePersistentVolumeClaim(t *testing.T) {
 	clientset, err := ksvc.NewClientset()
 	assert.NoError(t, err)
 
-	err = DeletePVC(clientset, pvcName, namespace)
+	err = DeletePVC(clientset, namespace, pvcName)
 	assert.NoError(t, err)
 }

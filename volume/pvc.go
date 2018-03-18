@@ -44,7 +44,7 @@ func NewPVC(params entity.PersistentVolumeClaimParameter) (*v1.PersistentVolumeC
 	}, nil
 }
 
-func CreatePVC(clientset *kubernetes.Clientset, pvc entity.PersistentVolumeClaimParameter, namespace string) error {
+func CreatePVC(clientset *kubernetes.Clientset, namespace string, pvc entity.PersistentVolumeClaimParameter) error {
 	kubePVC, err := NewPVC(pvc)
 	if err != nil {
 		return err
@@ -58,10 +58,10 @@ func CreatePVC(clientset *kubernetes.Clientset, pvc entity.PersistentVolumeClaim
 	return nil
 }
 
-func GetPVC(clientset *kubernetes.Clientset, name string, namespace string) (*v1.PersistentVolumeClaim, error) {
+func GetPVC(clientset *kubernetes.Clientset, namespace string, name string) (*v1.PersistentVolumeClaim, error) {
 	return clientset.CoreV1().PersistentVolumeClaims(namespace).Get(name, metav1.GetOptions{})
 }
 
-func DeletePVC(clientset *kubernetes.Clientset, name string, namespace string) error {
+func DeletePVC(clientset *kubernetes.Clientset, namespace string, name string) error {
 	return clientset.CoreV1().PersistentVolumeClaims(namespace).Delete(name, &metav1.DeleteOptions{})
 }
