@@ -25,12 +25,15 @@ func TestCreatePersistentVolumeClaim(t *testing.T) {
 	clientset, err := ksvc.NewClientset()
 	assert.NoError(t, err)
 
-	pvc := entity.PersistentVolumeClaimParameter{
+	params := entity.PersistentVolumeClaimParameter{
 		Name:         pvcName,
 		StorageClass: "slow-one",
 		Capacity:     "1Gi",
 		AccessMode:   "ReadWriteOnce",
 	}
+
+	pvc, err := NewPVC(params)
+	assert.NoError(t, err)
 
 	err = CreatePVC(clientset, namespace, pvc)
 	assert.NoError(t, err)
