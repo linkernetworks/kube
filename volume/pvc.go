@@ -1,4 +1,4 @@
-package volumes
+package volume
 
 import (
 	"bitbucket.org/linkernetworks/aurora/src/entity"
@@ -8,11 +8,15 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+func ParseQuantity(quantity string) (resource.Quantity, error) {
+	return resource.ParseQuantity(quantity)
+}
+
 // NewPVC returns the kubernetes persistent volume claim object
-func NewPVC(pvc entity.PersistentVolumeClaimParameter) (*v1.PersistentVolumeClaim, error) {
+func NewPVC(params entity.PersistentVolumeClaimParameter) (*v1.PersistentVolumeClaim, error) {
 	resources := make(v1.ResourceList)
 
-	capacity, err := resource.ParseQuantity(pvc.Capacity)
+	capacity, err := ParseQuantity(params.Capacity)
 	if err != nil {
 		return nil, err
 	}
@@ -24,7 +28,7 @@ func NewPVC(pvc entity.PersistentVolumeClaimParameter) (*v1.PersistentVolumeClai
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: pvc.Name,
+			Name: params.Name,
 			Labels: map[string]string{
 				"kind": "workspace",
 			},
@@ -34,8 +38,8 @@ func NewPVC(pvc entity.PersistentVolumeClaimParameter) (*v1.PersistentVolumeClai
 				Limits:   resources,
 				Requests: resources,
 			},
-			AccessModes:      []v1.PersistentVolumeAccessMode{v1.PersistentVolumeAccessMode(pvc.AccessMode)},
-			StorageClassName: &pvc.StorageClass,
+			AccessModes:      []v1.PersistentVolumeAccessMode{v1.PersistentVolumeAccessMode(params.AccessMode)},
+			StorageClassName: &params.StorageClass,
 		},
 	}, nil
 }
