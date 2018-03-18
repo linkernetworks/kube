@@ -103,7 +103,7 @@ func ConnectAndRewrite(cf config.Config) (config.Config, error) {
 	}
 
 	svc := k8ssvc.NewFromConfig(cf.Kubernetes)
-	clientset, err := svc.CreateClientset()
+	clientset, err := svc.NewClientset()
 	if err != nil {
 		return cf, err
 	}

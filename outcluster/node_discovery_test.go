@@ -18,7 +18,7 @@ func TestDiscoverVisibleNodes(t *testing.T) {
 
 	cf := config.MustRead("../../../config/testing.json")
 	ksvc := kubernetes.NewFromConfig(cf.Kubernetes)
-	clientset, err := ksvc.CreateClientset()
+	clientset, err := ksvc.NewClientset()
 	assert.NoError(t, err)
 
 	node, addr, err := DiscoverVisibleNode(clientset)

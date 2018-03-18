@@ -24,7 +24,7 @@ func TestNodeSync(t *testing.T) {
 	cf := config.MustRead(testingConfigPath)
 
 	ksvc := kubernetes.NewFromConfig(cf.Kubernetes)
-	clientset, err := ksvc.CreateClientset()
+	clientset, err := ksvc.NewClientset()
 	assert.NoError(t, err)
 
 	ms := mongo.New(cf.Mongo.Url)

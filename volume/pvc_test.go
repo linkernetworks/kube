@@ -22,7 +22,7 @@ func TestCreatePersistentVolumeClaim(t *testing.T) {
 	}
 	cf := config.MustRead(testingConfigPath)
 	ksvc := k8ssvc.NewFromConfig(cf.Kubernetes)
-	clientset, err := ksvc.CreateClientset()
+	clientset, err := ksvc.NewClientset()
 	assert.NoError(t, err)
 
 	pvc := entity.PersistentVolumeClaimParameter{
@@ -43,7 +43,7 @@ func TestGetPersistentVolumeClaim(t *testing.T) {
 	}
 	cf := config.MustRead(testingConfigPath)
 	ksvc := k8ssvc.NewFromConfig(cf.Kubernetes)
-	clientset, err := ksvc.CreateClientset()
+	clientset, err := ksvc.NewClientset()
 	assert.NoError(t, err)
 
 	pvc, err := GetPVC(clientset, pvcName, namespace)
@@ -59,7 +59,7 @@ func TestDeletePersistentVolumeClaim(t *testing.T) {
 	}
 	cf := config.MustRead(testingConfigPath)
 	ksvc := k8ssvc.NewFromConfig(cf.Kubernetes)
-	clientset, err := ksvc.CreateClientset()
+	clientset, err := ksvc.NewClientset()
 	assert.NoError(t, err)
 
 	err = DeletePVC(clientset, pvcName, namespace)

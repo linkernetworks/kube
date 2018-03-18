@@ -27,7 +27,7 @@ func TestQueryNodeGPUUsage(t *testing.T) {
 	ksvc := kubernetes.NewFromConfig(cf.Kubernetes)
 
 	// kubernetes clientset (get from kubernetes svc)
-	clientset, err := ksvc.CreateClientset()
+	clientset, err := ksvc.NewClientset()
 	assert.NoError(t, err)
 
 	// create deployment target (pass kubernetes clientset)
