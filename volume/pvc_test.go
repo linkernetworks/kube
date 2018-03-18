@@ -32,7 +32,7 @@ func TestCreatePersistentVolumeClaim(t *testing.T) {
 		AccessMode:   "ReadWriteOnce",
 	}
 
-	err = CreatePVC(clientset, pvc, namespace)
+	err = CreatePVC(clientset, namespace, pvc)
 	assert.NoError(t, err)
 }
 
