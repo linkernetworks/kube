@@ -33,8 +33,8 @@ func matchPodName(obj interface{}, podName string) (*v1.Pod, bool) {
 	return pod, podName == pod.ObjectMeta.Name
 }
 
-// WaitFor wait for a pod to the specific phase
-func (t *PodTracker) WaitFor(waitPhase v1.PodPhase) {
+// WaitForPhase wait for a pod to the specific phase
+func (t *PodTracker) WaitForPhase(waitPhase v1.PodPhase) {
 	var m sync.Mutex
 	var cv = sync.NewCond(&m)
 	m.Lock()
