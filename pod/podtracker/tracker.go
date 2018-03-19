@@ -93,6 +93,10 @@ func (t *PodTracker) TrackDelete(callback PodReceiver) {
 }
 
 func (t *PodTracker) Stop() {
-	var e struct{}
-	t.stop <- e
+	if nil != t.stop {
+		var e struct{}
+		t.stop <- e
+		close(t.stop)
+		t.stop = nil
+	}
 }
