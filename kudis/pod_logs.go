@@ -3,19 +3,17 @@ package kudis
 import (
 	"fmt"
 	"regexp"
-	"strings"
 	"time"
 
 	"bitbucket.org/linkernetworks/aurora/src/deployment"
 	dtypes "bitbucket.org/linkernetworks/aurora/src/deployment/types"
 	"bitbucket.org/linkernetworks/aurora/src/event"
-	"bitbucket.org/linkernetworks/aurora/src/jobmonitor"
+	// "bitbucket.org/linkernetworks/aurora/src/jobmonitor"
 	"bitbucket.org/linkernetworks/aurora/src/logger"
 	"bitbucket.org/linkernetworks/aurora/src/service/redis"
 )
 
 var PodLogRegExp = regexp.MustCompile("target:(?P<Target>[a-z_-]+):pod:(?P<Pod>[a-z0-9_-]+):container:(?P<Container>[a-z0-9_-]+):logs")
-var JobLogRegExp = regexp.MustCompile("target:(?P<Target>[a-z_-]+):job:(?P<Job>[a-z0-9_-]+):step:(?P<Step>[0-9]+):container:(?P<Container>[a-z0-9_-]+):logs")
 
 type PodLogSubscription struct {
 	redis            *redis.Service
@@ -24,7 +22,6 @@ type PodLogSubscription struct {
 	stop             chan bool
 
 	Target        string
-	Kind          string
 	PodName       string
 	ContainerName string
 	Log           string
@@ -35,12 +32,11 @@ type PodLogSubscription struct {
 	watcher deployment.Watcher
 }
 
-func NewPodLogSubscription(rds *redis.Service, target string, kind string, dt deployment.DeploymentTarget, podName string, containerName string, tl int64) *PodLogSubscription {
+func NewPodLogSubscription(rds *redis.Service, target string, dt deployment.DeploymentTarget, podName string, containerName string, tl int64) *PodLogSubscription {
 	return &PodLogSubscription{
 		redis:            rds,
 		stop:             make(chan bool),
 		Target:           target,
-		Kind:             kind,
 		DeploymentTarget: dt,
 		PodName:          podName,
 		ContainerName:    containerName,
@@ -57,22 +53,14 @@ func (s *PodLogSubscription) Regexp() *regexp.Regexp {
 }
 
 func (s *PodLogSubscription) Topic() string {
-	if s.Kind == "job" {
-		// TODO move this out from kudis package
-		jobName := podNameToJobName(s.PodName)
-		kube := jobmonitor.KubernetesJobName(jobName)
-		return fmt.Sprintf("target:%s:job:%s:step:%d:container:%s:logs", s.Target, kube.GetJobID(), kube.GetStep(), s.ContainerName)
-	} else {
-		return fmt.Sprintf("target:%s:pod:%s:container:%s:logs", s.Target, s.PodName, s.ContainerName)
-	}
+	return fmt.Sprintf("target:%s:pod:%s:container:%s:logs", s.Target, s.PodName, s.ContainerName)
 }
 
 func (p *PodLogSubscription) newEvent(text string) *event.RecordEvent {
-	doc := []string{p.Kind, "container", "logs"}
 	return &event.RecordEvent{
 		Type: "record.insert",
 		Insert: &event.RecordInsertEvent{
-			Document: strings.Join(doc, "."),
+			Document: "pod.container.logs",
 			Record: map[string]interface{}{
 				"target":    p.Target,
 				"pod":       p.PodName,

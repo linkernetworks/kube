@@ -18,7 +18,6 @@ func TestPodLogSubscriptionTopic(t *testing.T) {
 func TestPodSubscriptionNewUpdateEvent(t *testing.T) {
 	subc := PodLogSubscription{
 		Target:        "default",
-		Kind:          "pod",
 		PodName:       "DPID",
 		ContainerName: "johnlin",
 	}
