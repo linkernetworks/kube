@@ -32,9 +32,26 @@ type ProxyInfoProvider interface {
 	BaseURL() string
 }
 
+//Special case for Pod Phase
+func HandlePodPhase(pod *v1.Pod) v1.PodPhase {
+	phase := pod.Status.Phase
+	if v1.PodRunning != phase {
+		return phase
+	}
+
+	//For Delete Pod, the last delete event is running status with notReady flag
+	for _, v := range pod.Status.ContainerStatuses {
+		if v.Ready == false {
+			phase = v1.PodSucceeded
+			break
+		}
+	}
+	return phase
+}
+
 func NewPodInfo(pod *v1.Pod) *entity.PodInfo {
 	return &entity.PodInfo{
-		Phase:     pod.Status.Phase,
+		Phase:     HandlePodPhase(pod),
 		Message:   pod.Status.Message,
 		Reason:    pod.Status.Reason,
 		StartTime: pod.Status.StartTime,
