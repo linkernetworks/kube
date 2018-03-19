@@ -9,10 +9,10 @@ import (
 func TestPodLogSubscriptionTopic(t *testing.T) {
 	subs := PodLogSubscription{
 		Target:        "default",
-		PodName:       "DPID",
+		PodName:       "pName",
 		ContainerName: "log-collector",
 	}
-	assert.Equal(t, "target:default:pod:DPID:container:log-collector:logs", subs.Topic())
+	assert.Equal(t, "target:default:pod:pName:container:log-collector:logs", subs.Topic())
 }
 
 func TestPodSubscriptionNewUpdateEvent(t *testing.T) {

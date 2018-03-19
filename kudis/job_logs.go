@@ -36,15 +36,15 @@ func (s *JobLogSubscription) Topic() string {
 	return fmt.Sprintf("target:%s:job:%s:container:%s:logs", s.Target, s.JobName, s.ContainerName)
 }
 
-func (p *JobLogSubscription) newEvent(text string) *event.RecordEvent {
+func (s *JobLogSubscription) newEvent(text string) *event.RecordEvent {
 	return &event.RecordEvent{
 		Type: "record.insert",
 		Insert: &event.RecordInsertEvent{
 			Document: "job.container.logs",
 			Record: map[string]interface{}{
-				"target":    p.Target,
-				"job":       p.JobName,
-				"container": p.ContainerName,
+				"target":    s.Target,
+				"job":       s.JobName,
+				"container": s.ContainerName,
 				"log":       text,
 			},
 		},

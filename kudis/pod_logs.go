@@ -56,15 +56,15 @@ func (s *PodLogSubscription) Topic() string {
 	return fmt.Sprintf("target:%s:pod:%s:container:%s:logs", s.Target, s.PodName, s.ContainerName)
 }
 
-func (p *PodLogSubscription) newEvent(text string) *event.RecordEvent {
+func (s *PodLogSubscription) newEvent(text string) *event.RecordEvent {
 	return &event.RecordEvent{
 		Type: "record.insert",
 		Insert: &event.RecordInsertEvent{
 			Document: "pod.container.logs",
 			Record: map[string]interface{}{
-				"target":    p.Target,
-				"pod":       p.PodName,
-				"container": p.ContainerName,
+				"target":    s.Target,
+				"pod":       s.PodName,
+				"container": s.ContainerName,
 				"log":       text,
 			},
 		},
@@ -72,6 +72,7 @@ func (p *PodLogSubscription) newEvent(text string) *event.RecordEvent {
 }
 
 func (s *PodLogSubscription) Stop() error {
+	s.stop <- true
 	return nil
 }
 
