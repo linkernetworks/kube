@@ -34,11 +34,12 @@ func matchPodName(obj interface{}, podName string) (*v1.Pod, bool) {
 }
 
 // WaitForPhase wait for a pod to the specific phase
+// FIXME Not Complete
 func (t *PodTracker) WaitForPhase(waitPhase v1.PodPhase) {
 	var m sync.Mutex
 	var cv = sync.NewCond(&m)
 	m.Lock()
-	t.Track(func(pod *v1.Pod) (stop bool) {
+	t.TrackUpdate(func(pod *v1.Pod) (stop bool) {
 		logger.Infof("Waiting for pod=%s phase=%s wait=%s", t.podName, pod.Status.Phase, waitPhase)
 		if waitPhase == pod.Status.Phase {
 			m.Lock()
@@ -52,7 +53,7 @@ func (t *PodTracker) WaitForPhase(waitPhase v1.PodPhase) {
 	m.Unlock()
 }
 
-func (t *PodTracker) Track(callback PodReceiver) {
+func (t *PodTracker) TrackAdd(callback PodReceiver) {
 	_, controller := kubemon.WatchPods(t.clientset, t.namespace, fields.Everything(), cache.ResourceEventHandlerFuncs{
 		AddFunc: func(newObj interface{}) {
 			if pod, ok := matchPodName(newObj, t.podName); ok {
@@ -61,6 +62,12 @@ func (t *PodTracker) Track(callback PodReceiver) {
 				}
 			}
 		},
+	})
+	go controller.Run(t.stop)
+}
+
+func (t *PodTracker) TrackUpdate(callback PodReceiver) {
+	_, controller := kubemon.WatchPods(t.clientset, t.namespace, fields.Everything(), cache.ResourceEventHandlerFuncs{
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			if pod, ok := matchPodName(newObj, t.podName); ok {
 				if callback(pod) {
@@ -68,7 +75,12 @@ func (t *PodTracker) Track(callback PodReceiver) {
 				}
 			}
 		},
+	})
+	go controller.Run(t.stop)
+}
 
+func (t *PodTracker) TrackDelete(callback PodReceiver) {
+	_, controller := kubemon.WatchPods(t.clientset, t.namespace, fields.Everything(), cache.ResourceEventHandlerFuncs{
 		DeleteFunc: func(obj interface{}) {
 			if pod, ok := matchPodName(obj, t.podName); ok {
 				if callback(pod) {

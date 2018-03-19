@@ -97,12 +97,10 @@ func (u *DocumentProxyInfoUpdater) getPod(doc SpawnableDocument) (*v1.Pod, error
 //
 // See package "k8s.io/kubernetes/pkg/apis/core/types.go" for more details.
 
-func (u *DocumentProxyInfoUpdater) TrackAndSync(doc SpawnableDocument) (*podtracker.PodTracker, error) {
+func (u *DocumentProxyInfoUpdater) SyncDocument(doc SpawnableDocument) func(pod *v1.Pod) (stop bool) {
 	podName := doc.DeploymentID()
 
-	tracker := podtracker.New(u.Clientset, u.Namespace, podName)
-
-	tracker.Track(func(pod *v1.Pod) (stop bool) {
+	return func(pod *v1.Pod) (stop bool) {
 		phase := pod.Status.Phase
 		logger.Infof("tracking %s: doc=%s pod=%s phase=%s", doc.Topic(), doc.GetID().Hex(), podName, phase)
 
@@ -148,7 +146,33 @@ func (u *DocumentProxyInfoUpdater) TrackAndSync(doc SpawnableDocument) (*podtrac
 
 		stop = false
 		return stop
-	})
+	}
+}
+
+func (u *DocumentProxyInfoUpdater) TrackAndSyncAdd(doc SpawnableDocument) (*podtracker.PodTracker, error) {
+	podName := doc.DeploymentID()
+
+	tracker := podtracker.New(u.Clientset, u.Namespace, podName)
+
+	tracker.TrackAdd(u.SyncDocument(doc))
+	return tracker, nil
+}
+
+func (u *DocumentProxyInfoUpdater) TrackAndSyncUpdate(doc SpawnableDocument) (*podtracker.PodTracker, error) {
+	podName := doc.DeploymentID()
+
+	tracker := podtracker.New(u.Clientset, u.Namespace, podName)
+
+	tracker.TrackUpdate(u.SyncDocument(doc))
+	return tracker, nil
+}
+
+func (u *DocumentProxyInfoUpdater) TrackAndSyncDelete(doc SpawnableDocument) (*podtracker.PodTracker, error) {
+	podName := doc.DeploymentID()
+
+	tracker := podtracker.New(u.Clientset, u.Namespace, podName)
+
+	tracker.TrackDelete(u.SyncDocument(doc))
 	return tracker, nil
 }
 
