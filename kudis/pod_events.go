@@ -54,8 +54,12 @@ func (s *PodEventSubscription) Stop() error {
 
 func (s *PodEventSubscription) Start() error {
 	var dt = s.DeploymentTarget.(*deployment.KubeDeploymentTarget)
+
+	watcher := dt.WatchPodEvents(s.PodName)
+
+	s.watcher = watcher
 	s.running = true
-	s.watcher = dt.WatchPodEvents(s.PodName)
+
 	go s.startStream()
 	return nil
 }
@@ -103,4 +107,5 @@ STREAM:
 			}
 		}
 	}
+	s.running = false
 }
