@@ -85,10 +85,6 @@ func (s *PodLogSubscription) Start() error {
 		return err
 	}
 
-	// start the log watcher
-	if err := watcher.Start(); err != nil {
-		return err
-	}
 	s.stream = watcher.C
 	s.watcher = watcher
 	s.running = true
