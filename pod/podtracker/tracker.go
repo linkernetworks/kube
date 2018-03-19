@@ -34,17 +34,22 @@ func matchPodName(obj interface{}, podName string) (*v1.Pod, bool) {
 }
 
 // WaitFor wait for a pod to the specific phase
-func (t *PodTracker) WaitFor(waitPhase v1.PodPhase) *sync.Cond {
-	cv := &sync.Cond{}
+func (t *PodTracker) WaitFor(waitPhase v1.PodPhase) {
+	var m sync.Mutex
+	var cv = sync.NewCond(&m)
+	m.Lock()
 	t.Track(func(pod *v1.Pod) (stop bool) {
-		logger.Infof("Wait for pod=%s phase=%s wait=%s", t.podName, pod.Status.Phase, waitPhase)
+		logger.Infof("Waiting for pod=%s phase=%s wait=%s", t.podName, pod.Status.Phase, waitPhase)
 		if waitPhase == pod.Status.Phase {
+			m.Lock()
 			cv.Signal()
+			m.Unlock()
 			stop = true
 		}
 		return stop
 	})
-	return cv
+	cv.Wait()
+	m.Unlock()
 }
 
 func (t *PodTracker) Track(callback PodReceiver) {
