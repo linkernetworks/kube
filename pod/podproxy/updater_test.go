@@ -31,12 +31,11 @@ func TestUpdater(t *testing.T) {
 	clientset, err := kubernetesService.CreateClientset()
 	assert.NoError(t, err)
 
-	session := mongoService.NewSession()
 	updater := DocumentProxyInfoUpdater{
 		Clientset:      clientset,
 		Namespace:      "default",
 		Redis:          redisService,
-		Session:        session,
+		MongoService:   mongoService,
 		CollectionName: "testobjs",
 		PortName:       "mongo",
 	}
