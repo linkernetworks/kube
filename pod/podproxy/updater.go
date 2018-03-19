@@ -51,8 +51,8 @@ type DocumentProxyInfoUpdater struct {
 	Clientset *kubernetes.Clientset
 	Namespace string
 
-	Redis   *redis.Service
-	Session *mongo.Session
+	Redis *redis.Service
+	Mongo *mongo.Service
 
 	// Which mongo collection to update
 	CollectionName string
@@ -168,6 +168,9 @@ func (u *DocumentProxyInfoUpdater) Sync(doc SpawnableDocument) error {
 }
 
 func (u *DocumentProxyInfoUpdater) Reset(doc SpawnableDocument) (err error) {
+	session := u.Mongo.NewSession()
+	defer session.Close()
+
 	var q = bson.M{"_id": doc.GetID()}
 	var m = bson.M{
 		"$set": bson.M{
@@ -179,7 +182,7 @@ func (u *DocumentProxyInfoUpdater) Reset(doc SpawnableDocument) (err error) {
 			"pod":          nil,
 		},
 	}
-	err = u.Session.C(u.CollectionName).Update(q, m)
+	err = session.C(u.CollectionName).Update(q, m)
 	u.emit(doc, doc.NewUpdateEvent(bson.M{
 		"backend.connected": false,
 		"backend.host":      nil,
@@ -191,9 +194,11 @@ func (u *DocumentProxyInfoUpdater) Reset(doc SpawnableDocument) (err error) {
 
 // SyncWith updates the given document's "backend" and "pod" field by the given
 // pod object.
-func (p *DocumentProxyInfoUpdater) SyncWithPod(doc SpawnableDocument, pod *v1.Pod) (err error) {
+func (u *DocumentProxyInfoUpdater) SyncWithPod(doc SpawnableDocument, pod *v1.Pod) (err error) {
+	session := u.Mongo.NewSession()
+	defer session.Close()
 
-	port, ok := podutil.FindContainerPort(pod, p.PortName)
+	port, ok := podutil.FindContainerPort(pod, u.PortName)
 	if !ok {
 		return ErrPortNotFound
 	}
@@ -208,14 +213,14 @@ func (p *DocumentProxyInfoUpdater) SyncWithPod(doc SpawnableDocument, pod *v1.Po
 		},
 	}
 
-	if err = p.Session.C(p.CollectionName).Update(q, m); err != nil {
+	if err = session.C(u.CollectionName).Update(q, m); err != nil {
 		return err
 	}
 
-	cache := NewProxyCache(p.Redis, 60*10)
+	cache := NewProxyCache(u.Redis, 60*10)
 	cache.SetAddress(doc.GetID().Hex(), backend.Addr())
 
-	p.emit(doc, doc.NewUpdateEvent(bson.M{
+	u.emit(doc, doc.NewUpdateEvent(bson.M{
 		"backend":           backend,
 		"backend.connected": pod.Status.PodIP != "",
 		"pod.phase":         pod.Status.Phase,
