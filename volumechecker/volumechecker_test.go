@@ -6,6 +6,7 @@ import (
 
 	"bitbucket.org/linkernetworks/aurora/src/config"
 	"bitbucket.org/linkernetworks/aurora/src/kubernetes/kubemon"
+	kvolume "bitbucket.org/linkernetworks/aurora/src/kubernetes/volume"
 	"bitbucket.org/linkernetworks/aurora/src/service/kubernetes"
 	"bitbucket.org/linkernetworks/aurora/src/types/container"
 
@@ -31,12 +32,11 @@ func TestMountSuccess(t *testing.T) {
 
 	cf := config.MustRead(testingConfigPath)
 	kubernetesService := kubernetes.NewFromConfig(cf.Kubernetes)
-	clientset, err := kubernetesService.CreateClientset()
+	clientset, err := kubernetesService.NewClientset()
 
 	id := bson.NewObjectId().Hex()
-	volume := []container.Volume{}
 	//Deploy a Check POD
-	pod := NewVolumeCheckPod(id, volume)
+	pod := NewVolumeCheckPod(id)
 	assert.NotNil(t, pod)
 
 	newPod, err := clientset.CoreV1().Pods(namespace).Create(&pod)
@@ -72,20 +72,22 @@ func TestMountFail(t *testing.T) {
 
 	cf := config.MustRead(testingConfigPath)
 	kubernetesService := kubernetes.NewFromConfig(cf.Kubernetes)
-	clientset, err := kubernetesService.CreateClientset()
+	clientset, err := kubernetesService.NewClientset()
 
 	id := bson.NewObjectId().Hex()
-	volume := []container.Volume{
+	volumes := []container.Volume{
 		{
-			ClaimName: "unexist",
+			ClaimName: "inexistent",
 			VolumeMount: container.VolumeMount{
-				Name:      "unexist",
+				Name:      "inexistent",
 				MountPath: "aaa",
 			},
 		},
 	}
 	//Deploy a Check POD
-	pod := NewVolumeCheckPod(id, volume)
+	pod := NewVolumeCheckPod(id)
+	kvolume.AttachVolumesToPod(volumes, &pod)
+
 	assert.NotNil(t, pod)
 
 	newPod, err := clientset.CoreV1().Pods(namespace).Create(&pod)
