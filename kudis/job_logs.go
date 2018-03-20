@@ -19,8 +19,10 @@ type JobLogSubscription struct {
 func NewJobLogSubscription(rds *redis.Service, target string, dt deployment.DeploymentTarget, jobName string, containerName string, tl int64) *JobLogSubscription {
 	return &JobLogSubscription{
 		PodLogSubscription: PodLogSubscription{
-			DeploymentTarget: dt,
+			redis:            rds,
+			stop:             make(chan bool),
 			Target:           target,
+			DeploymentTarget: dt,
 			ContainerName:    containerName,
 			tailLines:        tl,
 		},
