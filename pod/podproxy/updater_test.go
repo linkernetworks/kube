@@ -35,7 +35,7 @@ func TestUpdater(t *testing.T) {
 		Clientset:      clientset,
 		Namespace:      "default",
 		Redis:          redisService,
-		MongoService:   mongoService,
+		Mongo:          mongoService,
 		CollectionName: "testobjs",
 		PortName:       "mongo",
 	}

@@ -51,8 +51,8 @@ type DocumentProxyInfoUpdater struct {
 	Clientset *kubernetes.Clientset
 	Namespace string
 
-	Redis        *redis.Service
-	MongoService *mongo.Service
+	Redis *redis.Service
+	Mongo *mongo.Service
 
 	// Which mongo collection to update
 	CollectionName string
@@ -168,7 +168,7 @@ func (u *DocumentProxyInfoUpdater) Sync(doc SpawnableDocument) error {
 }
 
 func (u *DocumentProxyInfoUpdater) Reset(doc SpawnableDocument) (err error) {
-	session := u.MongoService.NewSession()
+	session := u.Mongo.NewSession()
 	defer session.Close()
 
 	var q = bson.M{"_id": doc.GetID()}
@@ -195,7 +195,7 @@ func (u *DocumentProxyInfoUpdater) Reset(doc SpawnableDocument) (err error) {
 // SyncWith updates the given document's "backend" and "pod" field by the given
 // pod object.
 func (u *DocumentProxyInfoUpdater) SyncWithPod(doc SpawnableDocument, pod *v1.Pod) (err error) {
-	session := u.MongoService.NewSession()
+	session := u.Mongo.NewSession()
 	defer session.Close()
 
 	port, ok := podutil.FindContainerPort(pod, u.PortName)
