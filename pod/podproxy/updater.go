@@ -169,7 +169,7 @@ func (u *DocumentProxyInfoUpdater) Sync(doc SpawnableDocument) error {
 
 func (u *DocumentProxyInfoUpdater) Reset(doc SpawnableDocument) (err error) {
 	session := u.MongoService.NewSession()
-	defer session.Clone()
+	defer session.Close()
 
 	var q = bson.M{"_id": doc.GetID()}
 	var m = bson.M{
@@ -196,7 +196,7 @@ func (u *DocumentProxyInfoUpdater) Reset(doc SpawnableDocument) (err error) {
 // pod object.
 func (u *DocumentProxyInfoUpdater) SyncWithPod(doc SpawnableDocument, pod *v1.Pod) (err error) {
 	session := u.MongoService.NewSession()
-	defer session.Clone()
+	defer session.Close()
 
 	port, ok := podutil.FindContainerPort(pod, u.PortName)
 	if !ok {
