@@ -71,7 +71,6 @@ func (s *PodLogSubscription) newEvent(text string) *event.RecordEvent {
 }
 
 func (s *PodLogSubscription) Stop() error {
-	s.stop <- true
 	return nil
 }
 

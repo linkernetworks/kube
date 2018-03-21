@@ -84,7 +84,7 @@ func TestSubscribeJobLogs(t *testing.T) {
 	dt, err := server.GetDeploymentTarget("default")
 	assert.NoError(t, err)
 
-	var subscription Subscription = NewJobLogSubscription(rds, "default", dt, "jobName", "container-name", 10)
+	var subscription Subscription = NewJobLogSubscription(rds, "default", dt, "migration", "migration", 10)
 	assert.NotNil(t, subscription)
 
 	success, reason, err := server.Subscribe(subscription)

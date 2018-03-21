@@ -2,9 +2,11 @@ package kudis
 
 import (
 	"fmt"
+	_ "log"
 	"regexp"
 
 	"bitbucket.org/linkernetworks/aurora/src/deployment"
+	dtypes "bitbucket.org/linkernetworks/aurora/src/deployment/types"
 	"bitbucket.org/linkernetworks/aurora/src/event"
 	"bitbucket.org/linkernetworks/aurora/src/service/redis"
 )
@@ -17,18 +19,12 @@ type JobLogSubscription struct {
 }
 
 func NewJobLogSubscription(rds *redis.Service, target string, dt deployment.DeploymentTarget, jobName string, containerName string, tl int64) *JobLogSubscription {
-	kdt := dt.(*deployment.KubeDeploymentTarget)
-	clientset := kdt.GetClientset()
-
-	job, _ := GetJob(clientset, target, jobName)
-
 	return &JobLogSubscription{
 		PodLogSubscription: PodLogSubscription{
 			redis:            rds,
 			stop:             make(chan bool),
 			Target:           target,
 			DeploymentTarget: dt,
-			PodName:          job.Spec.Template.ObjectMeta.GetName(),
 			ContainerName:    containerName,
 			tailLines:        tl,
 		},
@@ -57,4 +53,35 @@ func (s *JobLogSubscription) newEvent(text string) *event.RecordEvent {
 			},
 		},
 	}
+}
+
+func (s *JobLogSubscription) Start() error {
+	// FIXME we need to use k8s job to find the pod name
+	// kdt := s.DeploymentTarget.(*deployment.KubeDeploymentTarget)
+	// clientset := kdt.GetClientset()
+
+	// job, err := GetJob(clientset, s.Target, s.JobName)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// log.Printf("Generate Name %v", job)
+	// magic to get pod name from a job
+	// s.PodName = job.Spec.Template.GetName()
+
+	// the pod id of the job
+	deployment := dtypes.Deployment{ID: s.PodName}
+
+	// listen the container logs from the log channel
+	watcher, err := s.DeploymentTarget.GetContainerLogStream(&deployment, s.ContainerName, s.tailLines)
+	if err != nil {
+		return err
+	}
+
+	s.stream = watcher.C
+	s.watcher = watcher
+	s.running = true
+
+	go s.startStream()
+	return nil
 }
