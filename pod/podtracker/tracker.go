@@ -34,7 +34,6 @@ func matchPodName(obj interface{}, podName string) (*v1.Pod, bool) {
 }
 
 // WaitForPhase wait for a pod to the specific phase
-// FIXME Not Complete
 func (t *PodTracker) WaitForPhase(waitPhase v1.PodPhase) {
 	var m sync.Mutex
 	var cv = sync.NewCond(&m)

@@ -32,14 +32,25 @@ type ProxyInfoProvider interface {
 	BaseURL() string
 }
 
-//Special case for Pod Phase
+/*
+We need to convert the pod.Status by ourself.
+case (1):
+	If we delete the pod and only focuse the delete event,
+	the last delete event will indicate the Pod phase as running ant that's not what we want.
+	the only metedata we can use is the "Ready" flag of all containers in that POD.
+	so, we only return the "Running" phaser if and only if all containers's ready flag is true.
+
+	According to the kubernetes document https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/
+	The Succeeded means: Succeeded: All Containers in the Pod have terminated in success, and will not be restarted.
+	So we return the Succeeded phase rather than running for deleteing POD
+*/
 func HandlePodPhase(pod *v1.Pod) v1.PodPhase {
 	phase := pod.Status.Phase
+
+	//Case1
 	if v1.PodRunning != phase {
 		return phase
 	}
-
-	//For Delete Pod, the last delete event is running status with notReady flag
 	for _, v := range pod.Status.ContainerStatuses {
 		if v.Ready == false {
 			phase = v1.PodSucceeded
