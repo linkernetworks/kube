@@ -215,7 +215,7 @@ func (u *DocumentProxyInfoUpdater) SyncWithPod(doc SpawnableDocument, pod *v1.Po
 	}
 
 	if err = session.C(u.CollectionName).Update(q, m); err != nil {
-		return fmt.Errorf("failed to update document with _id=%s: %v", doc.GetID().Hex(), err)
+		return fmt.Errorf("failed to update document '%s' with _id=%s: %v", u.CollectionName, doc.GetID().Hex(), err)
 	}
 
 	cache := NewProxyCache(u.Redis, 60*10)
