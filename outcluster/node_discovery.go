@@ -1,7 +1,7 @@
 package outcluster
 
 import (
-	"bitbucket.org/linkernetworks/aurora/src/logger"
+	"fmt"
 
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -17,7 +17,8 @@ func DiscoverVisibleNode(clientset *kubernetes.Clientset, addressType string) (*
 	}
 	for _, n := range nodesList.Items {
 		for _, addr := range n.Status.Addresses {
-			if addr.Type == addressType && addr.Address != "" {
+			fmt.Printf("address: %+v\n", addr)
+			if string(addr.Type) == addressType && addr.Address != "" {
 				return &n, addr.Address, nil
 			}
 		}
