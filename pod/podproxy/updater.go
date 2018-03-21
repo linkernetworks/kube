@@ -2,7 +2,6 @@ package podproxy
 
 import (
 	"errors"
-	"fmt"
 
 	"bitbucket.org/linkernetworks/aurora/src/entity"
 	"bitbucket.org/linkernetworks/aurora/src/event"
@@ -11,7 +10,6 @@ import (
 	"bitbucket.org/linkernetworks/aurora/src/kubernetes/types"
 	"bitbucket.org/linkernetworks/aurora/src/logger"
 
-	"bitbucket.org/linkernetworks/aurora/src/service/mongo"
 	"bitbucket.org/linkernetworks/aurora/src/service/redis"
 
 	"k8s.io/client-go/kubernetes"
@@ -81,10 +79,6 @@ type DocumentProxyInfoUpdater struct {
 	Namespace string
 
 	Redis *redis.Service
-	Mongo *mongo.Service
-
-	// Which mongo collection to update
-	CollectionName string
 
 	// The PortName of the Pod
 	PortName string
@@ -220,58 +214,22 @@ func (u *DocumentProxyInfoUpdater) Sync(doc SpawnableDocument) error {
 	return u.SyncWithPod(doc, pod)
 }
 
-func (u *DocumentProxyInfoUpdater) Reset(doc SpawnableDocument) (err error) {
-	session := u.Mongo.NewSession()
-	defer session.Close()
-
-	var q = bson.M{"_id": doc.GetID()}
-	var m = bson.M{
-		"$set": bson.M{
-			"backend.connected": false,
-		},
-		"$unset": bson.M{
-			"backend.host": nil,
-			"backend.port": nil,
-			"pod":          nil,
-		},
-	}
-	err = session.C(u.CollectionName).Update(q, m)
-	u.emit(doc, doc.NewUpdateEvent(bson.M{
-		"backend.connected": false,
-		"backend.host":      nil,
-		"backend.port":      nil,
-		"pod":               nil,
-	}))
-	return err
+func (u *DocumentProxyInfoUpdater) Reset(doc SpawnableDocument) error {
+	cache := NewProxyCache(u.Redis, 60*10)
+	return cache.RemoveAddress(doc.GetID().Hex())
 }
 
 // SyncWith updates the given document's "backend" and "pod" field by the given
 // pod object.
 func (u *DocumentProxyInfoUpdater) SyncWithPod(doc SpawnableDocument, pod *v1.Pod) (err error) {
-	session := u.Mongo.NewSession()
-	defer session.Close()
-
 	port, ok := podutil.FindContainerPort(pod, u.PortName)
 	if !ok {
 		return ErrPortNotFound
 	}
 
 	backend := NewProxyBackendFromPod(pod, port)
-
-	q := bson.M{"_id": doc.GetID()}
-	m := bson.M{
-		"$set": bson.M{
-			"backend": backend,
-			"pod":     NewPodInfo(pod),
-		},
-	}
-
-	if err = session.C(u.CollectionName).Update(q, m); err != nil {
-		return fmt.Errorf("failed to update document '%s' with _id=%s: %v", u.CollectionName, doc.GetID().Hex(), err)
-	}
-
 	cache := NewProxyCache(u.Redis, 60*10)
-	cache.SetAddress(doc.GetID().Hex(), backend.Addr())
+	err = cache.SetAddress(doc.GetID().Hex(), backend.Addr())
 
 	u.emit(doc, doc.NewUpdateEvent(bson.M{
 		"backend":           backend,
@@ -281,7 +239,7 @@ func (u *DocumentProxyInfoUpdater) SyncWithPod(doc SpawnableDocument, pod *v1.Po
 		"pod.reason":        pod.Status.Reason,
 		"pod.startTime":     pod.Status.StartTime,
 	}))
-	return nil
+	return err
 }
 
 func (p *DocumentProxyInfoUpdater) emit(doc SpawnableDocument, e *event.RecordEvent) {

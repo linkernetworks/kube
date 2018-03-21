@@ -114,12 +114,17 @@ func Rewrite(clientset *kubernetes.Clientset, cf config.Config) (config.Config, 
 	var dst = cf
 	var err error
 
-	node, address, err := DiscoverVisibleNode(clientset)
+	node, address, err := DiscoverVisibleNode(clientset, cf.Kubernetes.OutCluster.AddressType)
 	if err != nil {
 		return dst, err
 	}
-	logger.Infof("Found node %s", address)
-	_ = node
+
+	if node == nil {
+		return dst, fmt.Errorf("node not found")
+	}
+
+	logger.Infof("Found node address: %v", address)
+	logger.Debugf("Found node: %+v", node)
 
 	mongo, err := clientset.Core().Services("default").Get("mongo-external", metav1.GetOptions{})
 	if err != nil {

@@ -17,12 +17,23 @@ func TestDiscoverVisibleNodes(t *testing.T) {
 	}
 
 	cf := config.MustRead("../../../config/testing.json")
+
+	t.Logf("config: %+v", cf.Kubernetes)
+
 	ksvc := kubernetes.NewFromConfig(cf.Kubernetes)
+
+	restConfig, err := ksvc.LoadConfig()
+	assert.NoError(t, err)
+	t.Logf("rest config: %+v", restConfig)
+
 	clientset, err := ksvc.NewClientset()
 	assert.NoError(t, err)
 
-	node, addr, err := DiscoverVisibleNode(clientset)
+	assert.Equal(t, "ExternalIP", cf.Kubernetes.OutCluster.AddressType)
+
+	node, addr, err := DiscoverVisibleNode(clientset, "ExternalIP")
 	assert.NoError(t, err)
+	assert.NotNil(t, node)
 
 	assert.True(t, addr != "")
 	assert.NotNil(t, node)
