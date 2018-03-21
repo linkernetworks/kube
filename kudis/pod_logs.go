@@ -3,7 +3,6 @@ package kudis
 import (
 	"fmt"
 	"regexp"
-	"time"
 
 	"bitbucket.org/linkernetworks/aurora/src/deployment"
 	dtypes "bitbucket.org/linkernetworks/aurora/src/deployment/types"

@@ -2,7 +2,6 @@ package kudis
 
 import (
 	"fmt"
-	_ "log"
 	"regexp"
 
 	"bitbucket.org/linkernetworks/aurora/src/deployment"
@@ -56,18 +55,16 @@ func (s *JobLogSubscription) newEvent(text string) *event.RecordEvent {
 }
 
 func (s *JobLogSubscription) Start() error {
-	// FIXME we need to use k8s job to find the pod name
-	// kdt := s.DeploymentTarget.(*deployment.KubeDeploymentTarget)
-	// clientset := kdt.GetClientset()
+	kdt := s.DeploymentTarget.(*deployment.KubeDeploymentTarget)
+	clientset := kdt.GetClientset()
 
-	// job, err := GetJob(clientset, s.Target, s.JobName)
-	// if err != nil {
-	// 	return err
-	// }
+	// magic function to get pod name from a job
+	pod, err := GetPodByJobName(clientset, s.Target, s.JobName)
+	if err != nil {
+		return err
+	}
 
-	// log.Printf("Generate Name %v", job)
-	// magic to get pod name from a job
-	// s.PodName = job.Spec.Template.GetName()
+	s.PodName = pod.GetName()
 
 	// the pod id of the job
 	deployment := dtypes.Deployment{ID: s.PodName}

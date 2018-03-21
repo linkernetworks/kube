@@ -1,23 +1,26 @@
 package kudis
 
 import (
-	"log"
+	"fmt"
 
-	batchV1 "k8s.io/api/batch/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	coreV1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
-func GetJob(clientset *kubernetes.Clientset, namespace, jobName string) (*batchV1.Job, error) {
-	opts := metav1.GetOptions{}
-	job, err := clientset.BatchV1().Jobs(namespace).Get(jobName, opts)
-	if errors.IsNotFound(err) {
-		log.Printf("Pod not found\n")
-		return nil, err
-	} else if err != nil {
-		log.Printf("clientset error: %+v", err.Error())
+func GetPodByJobName(clientset *kubernetes.Clientset, namespace, jobName string) (*coreV1.Pod, error) {
+	label := "job-name=" + jobName
+	opts := metav1.ListOptions{
+		LabelSelector: label,
+	}
+	list, err := clientset.CoreV1().Pods(namespace).List(opts)
+	if err != nil {
 		return nil, err
 	}
-	return job, nil
+
+	if len(list.Items) == 0 {
+		return nil, fmt.Errorf("could not find job for pod in namespace %s with label: %v", namespace, label)
+	}
+	// since we might get many pods but we always return the latest one
+	return &list.Items[0], nil
 }
