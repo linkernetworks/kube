@@ -77,9 +77,9 @@ func TestMountFail(t *testing.T) {
 	id := bson.NewObjectId().Hex()
 	volumes := []container.Volume{
 		{
-			ClaimName: "inexistent",
+			ClaimName: "nonexistent",
 			VolumeMount: container.VolumeMount{
-				Name:      "inexistent",
+				Name:      "nonexistent",
 				MountPath: "aaa",
 			},
 		},
