@@ -6,7 +6,6 @@ import (
 
 	"bitbucket.org/linkernetworks/aurora/src/config"
 	"bitbucket.org/linkernetworks/aurora/src/service/kubernetes"
-	"bitbucket.org/linkernetworks/aurora/src/service/mongo"
 	"bitbucket.org/linkernetworks/aurora/src/service/redis"
 
 	"github.com/stretchr/testify/assert"
@@ -25,19 +24,16 @@ func TestUpdater(t *testing.T) {
 	cf := config.MustRead(testingConfigPath)
 
 	kubernetesService := kubernetes.NewFromConfig(cf.Kubernetes)
-	mongoService := mongo.New(cf.Mongo.Url)
 	redisService := redis.New(cf.Redis)
 
 	clientset, err := kubernetesService.NewClientset()
 	assert.NoError(t, err)
 
 	updater := DocumentProxyInfoUpdater{
-		Clientset:      clientset,
-		Namespace:      "default",
-		Redis:          redisService,
-		Mongo:          mongoService,
-		CollectionName: "testobjs",
-		PortName:       "mongo",
+		Clientset: clientset,
+		Namespace: "default",
+		Redis:     redisService,
+		PortName:  "mongo",
 	}
 	_ = updater
 }

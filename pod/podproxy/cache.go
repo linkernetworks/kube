@@ -34,6 +34,14 @@ func (c *ProxyCache) SetAddress(docID string, address string) error {
 	return c.setCacheAddress(conn, cacheKey, address)
 }
 
+func (c *ProxyCache) RemoveAddress(docID string) error {
+	cacheKey := c.Prefix + docID
+	conn := c.Redis.GetConnection()
+	defer conn.Close()
+	_, err := conn.Delete(cacheKey)
+	return err
+}
+
 // GetAddress uses the redis connection to get the address
 func (c *ProxyCache) GetAddress(docID string, fetch AddressFetcher) (address string, err error) {
 	// Get the document and its pod info cache from redis
