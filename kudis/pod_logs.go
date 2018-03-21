@@ -3,7 +3,6 @@ package kudis
 import (
 	"fmt"
 	"regexp"
-	"time"
 
 	"bitbucket.org/linkernetworks/aurora/src/deployment"
 	dtypes "bitbucket.org/linkernetworks/aurora/src/deployment/types"
@@ -99,13 +98,6 @@ func (s *PodLogSubscription) Start() error {
 
 func (s *PodLogSubscription) startStream() {
 	var topic = s.Topic()
-	var conn = s.redis.GetConnection()
-	defer conn.Close()
-
-	// due to the defer order, the keepalive will be stopped first before the
-	// connection is closed.
-	var keepalive = conn.KeepAlive(10 * time.Second)
-	defer keepalive.Stop()
 STREAM:
 	for {
 		select {
@@ -115,8 +107,10 @@ STREAM:
 			break STREAM
 		case lc, ok := <-s.stream:
 			if ok {
+				var conn = s.redis.GetConnection()
 				// publish to redis with the topic
 				conn.PublishAndSetJSON(topic, s.newEvent(lc.Line))
+				conn.Close()
 			} else {
 				// receive log EOF
 				logger.Infof("topic:%s EOF", topic)
