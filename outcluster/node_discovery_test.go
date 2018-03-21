@@ -21,7 +21,7 @@ func TestDiscoverVisibleNodes(t *testing.T) {
 	clientset, err := ksvc.NewClientset()
 	assert.NoError(t, err)
 
-	node, addr, err := DiscoverVisibleNode(clientset)
+	node, addr, err := DiscoverVisibleNode(clientset, "ExternalIP")
 	assert.NoError(t, err)
 
 	assert.True(t, addr != "")
