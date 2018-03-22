@@ -97,6 +97,10 @@ func TestSubscribeJobLogs(t *testing.T) {
 	_, err = deployKubenetesJob(clientset, "default", job)
 	assert.NoError(t, err)
 
+	// should waiting the job state to succeed
+	err = waitUntilContainerSucceed(clientset, "default", job)
+	assert.NoError(t, err)
+
 	var subscription Subscription = NewJobLogSubscription(rds, "default", dt, "hello", "hello", 10)
 	assert.NotNil(t, subscription)
 
@@ -173,4 +177,16 @@ func deployKubenetesJob(clientset *kubernetes.Clientset, namespace string, job *
 func deleteKubenetesJob(clientset *kubernetes.Clientset, namespace string, job *batchV1.Job) error {
 	opts := metaV1.NewDeleteOptions(0)
 	return clientset.BatchV1().Jobs(namespace).Delete(job.GetName(), opts)
+}
+
+func waitUntilContainerSucceed(clientset *kubernetes.Clientset, namespace string, job *batchV1.Job) error {
+	for {
+		j, err := clientset.BatchV1().Jobs(namespace).Get(job.GetName(), metaV1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		if j.Status.Succeeded == 1 || j.Status.Failed == 1 {
+			return nil
+		}
+	}
 }
