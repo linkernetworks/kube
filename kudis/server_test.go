@@ -3,7 +3,6 @@ package kudis
 import (
 	"os"
 	"testing"
-	"time"
 
 	"bitbucket.org/linkernetworks/aurora/src/config"
 	"bitbucket.org/linkernetworks/aurora/src/deployment"
