@@ -2,7 +2,6 @@ package kudis
 
 import (
 	"fmt"
-	"log"
 	"regexp"
 
 	"bitbucket.org/linkernetworks/aurora/src/deployment"

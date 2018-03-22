@@ -94,7 +94,7 @@ func TestSubscribeJobLogs(t *testing.T) {
 	assert.NoError(t, err)
 
 	// waiting for container creating
-	time.Sleep(250 * time.Millisecond)
+	time.Sleep(350 * time.Millisecond)
 
 	var subscription Subscription = NewJobLogSubscription(rds, "default", dt, "hello", "hello", 10)
 	assert.NotNil(t, subscription)
