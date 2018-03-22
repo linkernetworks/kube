@@ -22,17 +22,17 @@ func TestUnmarshalPodLogSubscriptionRequestJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	pTarget := req.GetTarget()
-	assert.Equal(t, "default", pTarget)
+	Target := req.GetTarget()
+	assert.Equal(t, "default", Target)
 
-	pPodName := req.GetPodName()
-	assert.Equal(t, "john-pod-id", pPodName)
+	PodName := req.GetPodName()
+	assert.Equal(t, "john-pod-id", PodName)
 
-	pContainerName := req.GetContainerName()
-	assert.Equal(t, "john-pod-container", pContainerName)
+	ContainerName := req.GetContainerName()
+	assert.Equal(t, "john-pod-container", ContainerName)
 
-	pTailLines := req.GetTailLines()
-	assert.EqualValues(t, 5, pTailLines)
+	TailLines := req.GetTailLines()
+	assert.EqualValues(t, 5, TailLines)
 }
 
 func TestUnmarshalJobLogSubscriptionRequestJSON(t *testing.T) {
@@ -50,15 +50,15 @@ func TestUnmarshalJobLogSubscriptionRequestJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	pTarget := req.GetTarget()
-	assert.Equal(t, "default", pTarget)
+	Target := req.GetTarget()
+	assert.Equal(t, "default", Target)
 
-	pJobName := req.GetJobName()
-	assert.Equal(t, "john-job-id", pJobName)
+	JobName := req.GetJobName()
+	assert.Equal(t, "john-job-id", JobName)
 
-	pContainerName := req.GetContainerName()
-	assert.Equal(t, "john-job-container", pContainerName)
+	ContainerName := req.GetContainerName()
+	assert.Equal(t, "john-job-container", ContainerName)
 
-	pTailLines := req.GetTailLines()
-	assert.EqualValues(t, 15, pTailLines)
+	TailLines := req.GetTailLines()
+	assert.EqualValues(t, 15, TailLines)
 }
