@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	"bitbucket.org/linkernetworks/aurora/src/entity"
-	"bitbucket.org/linkernetworks/aurora/src/event"
 	"bitbucket.org/linkernetworks/aurora/src/kubernetes/pod/podtracker"
 	"bitbucket.org/linkernetworks/aurora/src/kubernetes/pod/podutil"
 	"bitbucket.org/linkernetworks/aurora/src/kubernetes/types"
@@ -70,8 +69,6 @@ func NewPodInfo(pod *v1.Pod) *entity.PodInfo {
 type SpawnableDocument interface {
 	types.DeploymentIDProvider
 	GetID() bson.ObjectId
-	Topic() string
-	NewUpdateEvent(info bson.M) *event.RecordEvent
 }
 
 type DocumentProxyInfoUpdater struct {
@@ -124,7 +121,7 @@ func (u *DocumentProxyInfoUpdater) SyncDocument(doc SpawnableDocument) func(pod 
 
 	return func(pod *v1.Pod) (stop bool) {
 		phase := pod.Status.Phase
-		logger.Infof("Found change %s: doc=%s pod=%s phase=%s", doc.Topic(), doc.GetID().Hex(), podName, phase)
+		logger.Infof("Found change %s: pod=%s phase=%s", doc.GetID().Hex(), podName, phase)
 
 		switch phase {
 		case v1.PodPending:
@@ -188,9 +185,7 @@ func (u *DocumentProxyInfoUpdater) TrackAndSyncAdd(doc SpawnableDocument) (*podt
 
 func (u *DocumentProxyInfoUpdater) TrackAndSyncUpdate(doc SpawnableDocument) (*podtracker.PodTracker, error) {
 	podName := doc.DeploymentID()
-
 	tracker := podtracker.New(u.Clientset, u.Namespace, podName)
-
 	tracker.TrackUpdate(u.SyncDocument(doc))
 	return tracker, nil
 }
@@ -237,21 +232,7 @@ func (u *DocumentProxyInfoUpdater) SyncWithPod(doc SpawnableDocument, pod *v1.Po
 
 	backend := NewProxyBackendFromPod(pod, port)
 	cache := NewProxyCache(u.Redis, 60*10)
-	err = cache.SetAddress(doc.GetID().Hex(), backend.Addr())
-
-	u.emit(doc, doc.NewUpdateEvent(bson.M{
-		"backend":           backend,
-		"backend.connected": pod.Status.PodIP != "",
-		"pod.phase":         pod.Status.Phase,
-		"pod.message":       pod.Status.Message,
-		"pod.reason":        pod.Status.Reason,
-		"pod.startTime":     pod.Status.StartTime,
-	}))
-	return err
-}
-
-func (p *DocumentProxyInfoUpdater) emit(doc SpawnableDocument, e *event.RecordEvent) {
-	go p.Redis.PublishAndSetJSON(doc.Topic(), e)
+	return cache.SetAddress(doc.GetID().Hex(), backend.Addr())
 }
 
 // NewProxyBackendFromPod creates the proxy backend struct from the pod object.
