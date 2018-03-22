@@ -1,7 +1,6 @@
 package kudis
 
 import (
-	"fmt"
 	"os"
 	"testing"
 
