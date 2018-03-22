@@ -3,6 +3,7 @@ package kudis
 import (
 	"os"
 	"testing"
+	"time"
 
 	"bitbucket.org/linkernetworks/aurora/src/config"
 	"bitbucket.org/linkernetworks/aurora/src/deployment"
@@ -84,7 +85,18 @@ func TestSubscribeJobLogs(t *testing.T) {
 	dt, err := server.GetDeploymentTarget("default")
 	assert.NoError(t, err)
 
-	var subscription Subscription = NewJobLogSubscription(rds, "default", dt, "migration", "migration", 10)
+	kdt := dt.(*deployment.KubeDeploymentTarget)
+	clientset := kdt.GetClientset()
+
+	// testing purpose for creating a dummy job
+	job := createKubernetesDummyJob("hello")
+	_, err = deployKubenetesJob(clientset, "default", job)
+	assert.NoError(t, err)
+
+	// waiting for container creating
+	time.Sleep(250 * time.Millisecond)
+
+	var subscription Subscription = NewJobLogSubscription(rds, "default", dt, "hello", "hello", 10)
 	assert.NotNil(t, subscription)
 
 	success, reason, err := server.Subscribe(subscription)
@@ -93,6 +105,10 @@ func TestSubscribeJobLogs(t *testing.T) {
 	t.Logf("reason: %s", reason)
 
 	err = subscription.Stop()
+	assert.NoError(t, err)
+
+	// cleanup
+	err = deleteKubenetesJob(clientset, "default", job)
 	assert.NoError(t, err)
 }
 
