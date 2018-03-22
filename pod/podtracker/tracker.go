@@ -42,7 +42,7 @@ func (t *PodTracker) WaitForPhase(waitPhase v1.PodPhase) {
 		logger.Infof("Waiting for pod=%s phase=%s wait=%s", t.podName, pod.Status.Phase, waitPhase)
 		if waitPhase == pod.Status.Phase {
 			m.Lock()
-			cv.Signal()
+			cv.Broadcast()
 			m.Unlock()
 			stop = true
 		}
