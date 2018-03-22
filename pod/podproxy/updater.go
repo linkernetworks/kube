@@ -124,12 +124,12 @@ func (u *DocumentProxyInfoUpdater) SyncDocument(doc SpawnableDocument) func(pod 
 
 	return func(pod *v1.Pod) (stop bool) {
 		phase := pod.Status.Phase
-		logger.Infof("tracking %s: doc=%s pod=%s phase=%s", doc.Topic(), doc.GetID().Hex(), podName, phase)
+		logger.Infof("Found change %s: doc=%s pod=%s phase=%s", doc.Topic(), doc.GetID().Hex(), podName, phase)
 
 		switch phase {
 		case v1.PodPending:
 			if err := u.SyncWithPod(doc, pod); err != nil {
-				logger.Errorf("failed to sync document: doc=%s pod=%s error=%v", doc.GetID().Hex(), podName, err)
+				logger.Errorf("Failed to sync document: doc=%s pod=%s error=%v", doc.GetID().Hex(), podName, err)
 			}
 
 			// Check all containers status in a pod. can't be ErrImagePull or ImagePullBackOff
@@ -152,6 +152,10 @@ func (u *DocumentProxyInfoUpdater) SyncDocument(doc SpawnableDocument) func(pod 
 					// stop tracking
 					stop = true
 					return stop
+
+				default:
+					logger.Errorf("Unexpected reason=%s", reason)
+
 				}
 			}
 
@@ -159,11 +163,13 @@ func (u *DocumentProxyInfoUpdater) SyncDocument(doc SpawnableDocument) func(pod 
 		// Terminating won't be catched
 		case v1.PodRunning, v1.PodFailed, v1.PodSucceeded, v1.PodUnknown:
 			if err := u.SyncWithPod(doc, pod); err != nil {
-				logger.Errorf("failed to sync document: pod=%s doc=%s error=%v", podName, doc.GetID().Hex(), err)
+				logger.Errorf("Failed to sync document: pod=%s doc=%s error=%v", podName, doc.GetID().Hex(), err)
 			}
 
 			stop = true
 			return stop
+		default:
+			logger.Errorf("phase not handled: %s", phase)
 		}
 
 		stop = false
@@ -222,6 +228,8 @@ func (u *DocumentProxyInfoUpdater) Reset(doc SpawnableDocument) error {
 // SyncWith updates the given document's "backend" and "pod" field by the given
 // pod object.
 func (u *DocumentProxyInfoUpdater) SyncWithPod(doc SpawnableDocument, pod *v1.Pod) (err error) {
+	logger.Debugf("Syncing document: %s", doc.DeploymentID())
+
 	port, ok := podutil.FindContainerPort(pod, u.PortName)
 	if !ok {
 		return ErrPortNotFound
