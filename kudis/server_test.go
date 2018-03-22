@@ -93,9 +93,6 @@ func TestSubscribeJobLogs(t *testing.T) {
 	_, err = deployKubenetesJob(clientset, "default", job)
 	assert.NoError(t, err)
 
-	// waiting for container creating
-	time.Sleep(350 * time.Millisecond)
-
 	var subscription Subscription = NewJobLogSubscription(rds, "default", dt, "hello", "hello", 10)
 	assert.NotNil(t, subscription)
 
