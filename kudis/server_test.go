@@ -113,8 +113,7 @@ func TestSubscribeJobLogs(t *testing.T) {
 	assert.NoError(t, err)
 
 	// cleanup
-	err = deleteKubenetesJob(clientset, "default", job)
-	assert.NoError(t, err)
+	defer deleteKubenetesJob(clientset, "default", job)
 }
 
 func TestSubscribePodEvent(t *testing.T) {
@@ -185,7 +184,7 @@ func waitUntilContainerSucceed(clientset *kubernetes.Clientset, namespace string
 		if err != nil {
 			return err
 		}
-		if j.Status.Succeeded == 1 || j.Status.Failed == 1 {
+		if j.Status.Succeeded > 0 || j.Status.Failed > 0 {
 			return nil
 		}
 	}
