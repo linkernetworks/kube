@@ -23,6 +23,15 @@ message PodLogSubscriptionRequest {
     int64 TailLines = 4;
 }
 
+// only use in SubscribeJobLogs for subscribing a job logs
+message JobLogSubscriptionRequest {
+    // target is the namespace of the cluster
+    string Target = 1;
+    string JobName = 2;
+    string ContainerName = 3;
+    int64 TailLines = 4;
+}
+
 message SubscriptionResponse {
     string type = 1;
     bool success = 2;

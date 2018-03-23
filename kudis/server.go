@@ -79,6 +79,27 @@ func (k *Server) SubscribePodLogs(ctx context.Context, req *pb.PodLogSubscriptio
 	return &pb.SubscriptionResponse{Success: success, Reason: reason}, err
 }
 
+func (k *Server) SubscribeJobLogs(ctx context.Context, req *pb.JobLogSubscriptionRequest) (*pb.SubscriptionResponse, error) {
+	target := req.GetTarget()
+	dt, err := k.GetDeploymentTarget(target)
+	if err != nil {
+		return &pb.SubscriptionResponse{
+			Success: false,
+			Reason:  err.Error(),
+		}, err
+	}
+
+	var subscription Subscription = NewJobLogSubscription(
+		k.redisService, target, dt,
+		req.GetJobName(),
+		req.GetContainerName(),
+		req.GetTailLines(),
+	)
+
+	success, reason, err := k.Subscribe(subscription)
+	return &pb.SubscriptionResponse{Success: success, Reason: reason}, err
+}
+
 func (k *Server) Subscribe(subscription Subscription) (success bool, reason string, err error) {
 	if prevsub, ok := k.LoadSubscription(subscription); ok {
 		if prevsub.IsRunning() {

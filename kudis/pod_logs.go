@@ -12,7 +12,6 @@ import (
 )
 
 var PodLogRegExp = regexp.MustCompile("target:(?P<Target>[a-z_-]+):pod:(?P<Pod>[a-z0-9_-]+):container:(?P<Container>[a-z0-9_-]+):logs")
-var JobLogRegExp = regexp.MustCompile("job:(?P<Job>[a-z0-9_-]+):container:(?P<Container>[a-z0-9_-]+):logs")
 
 type PodLogSubscription struct {
 	redis            *redis.Service
@@ -55,15 +54,15 @@ func (s *PodLogSubscription) Topic() string {
 	return fmt.Sprintf("target:%s:pod:%s:container:%s:logs", s.Target, s.PodName, s.ContainerName)
 }
 
-func (p *PodLogSubscription) newEvent(text string) *event.RecordEvent {
+func (s *PodLogSubscription) newEvent(text string) *event.RecordEvent {
 	return &event.RecordEvent{
 		Type: "record.insert",
 		Insert: &event.RecordInsertEvent{
 			Document: "pod.container.logs",
 			Record: map[string]interface{}{
-				"target":    p.Target,
-				"pod":       p.PodName,
-				"container": p.ContainerName,
+				"target":    s.Target,
+				"pod":       s.PodName,
+				"container": s.ContainerName,
 				"log":       text,
 			},
 		},
@@ -84,10 +83,6 @@ func (s *PodLogSubscription) Start() error {
 		return err
 	}
 
-	// start the log watcher
-	if err := watcher.Start(); err != nil {
-		return err
-	}
 	s.stream = watcher.C
 	s.watcher = watcher
 	s.running = true

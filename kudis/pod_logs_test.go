@@ -9,10 +9,10 @@ import (
 func TestPodLogSubscriptionTopic(t *testing.T) {
 	subs := PodLogSubscription{
 		Target:        "default",
-		PodName:       "DPID",
+		PodName:       "pName",
 		ContainerName: "log-collector",
 	}
-	assert.Equal(t, "target:default:pod:DPID:container:log-collector:logs", subs.Topic())
+	assert.Equal(t, "target:default:pod:pName:container:log-collector:logs", subs.Topic())
 }
 
 func TestPodSubscriptionNewUpdateEvent(t *testing.T) {
@@ -31,4 +31,25 @@ func TestPodSubscriptionNewUpdateEvent(t *testing.T) {
 	assert.Equal(t, "DPID", pEvent.Insert.Record["pod"])
 	assert.Equal(t, "johnlin", pEvent.Insert.Record["container"])
 	assert.Equal(t, message, pEvent.Insert.Record["log"])
+}
+
+func TestMatchRegexpPodLog(t *testing.T) {
+	errorMatchPodLogTopicArray := []string{
+		"target:default:container:nodesync:logs",
+		"pod:nodesync-54d4995cdc-xt44h:container:nodesync:logs",
+	}
+
+	correctMatchPodLogTopicArray := []string{
+		"target:default:pod:nodesync-54d4995cdc-xt44h:container:nodesync:logs",
+	}
+
+	for _, e := range errorMatchPodLogTopicArray {
+		m := PodLogRegExp.MatchString(e)
+		assert.False(t, m)
+	}
+
+	for _, c := range correctMatchPodLogTopicArray {
+		m := PodLogRegExp.MatchString(c)
+		assert.True(t, m)
+	}
 }
