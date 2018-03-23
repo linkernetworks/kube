@@ -69,6 +69,8 @@ func TestJobTracker(t *testing.T) {
 	kubejob := CreateKubernetesSleepJob(id, 2)
 
 	resp, err := clientset.BatchV1().Jobs(kubeNamespce).Create(kubejob)
+	//Use this defer to make sure the job is been deleted after the test
+	defer clientset.BatchV1().Jobs("default").Delete(kubejob.Name, &metav1.DeleteOptions{})
 	assert.NotNil(t, resp)
 	//Wait Phase
 	tracker := New(clientset, kubeNamespce, kubejob.Name)
