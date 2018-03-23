@@ -68,7 +68,6 @@ func NewPodInfo(pod *v1.Pod) *entity.PodInfo {
 
 type SpawnableDocument interface {
 	types.DeploymentIDProvider
-	GetID() bson.ObjectId
 }
 
 type ProxyAddressUpdater struct {
@@ -121,12 +120,12 @@ func (u *ProxyAddressUpdater) SyncDocument(doc SpawnableDocument) func(pod *v1.P
 
 	return func(pod *v1.Pod) (stop bool) {
 		phase := pod.Status.Phase
-		logger.Infof("Found change %s: pod=%s phase=%s", doc.GetID().Hex(), podName, phase)
+		logger.Infof("Found change: pod=%s phase=%s", podName, phase)
 
 		switch phase {
 		case v1.PodPending:
 			if err := u.SyncWithPod(doc, pod); err != nil {
-				logger.Errorf("Failed to sync document: doc=%s pod=%s error=%v", doc.GetID().Hex(), podName, err)
+				logger.Errorf("Failed to sync address: pod=%s error=%v", podName, err)
 			}
 
 			// Check all containers status in a pod. can't be ErrImagePull or ImagePullBackOff
@@ -160,7 +159,7 @@ func (u *ProxyAddressUpdater) SyncDocument(doc SpawnableDocument) func(pod *v1.P
 		// Terminating won't be catched
 		case v1.PodRunning, v1.PodFailed, v1.PodSucceeded, v1.PodUnknown:
 			if err := u.SyncWithPod(doc, pod); err != nil {
-				logger.Errorf("Failed to sync document: pod=%s doc=%s error=%v", podName, doc.GetID().Hex(), err)
+				logger.Errorf("Failed to sync document: pod=%s error=%v", podName, err)
 			}
 
 			stop = true
@@ -217,7 +216,7 @@ func (u *ProxyAddressUpdater) Sync(doc SpawnableDocument) error {
 
 func (u *ProxyAddressUpdater) Reset(doc SpawnableDocument) error {
 	cache := NewProxyCache(u.Redis, 60*10)
-	return cache.RemoveAddress(doc.GetID().Hex())
+	return cache.RemoveAddress(doc.DeploymentID())
 }
 
 // SyncWith updates the given document's "backend" and "pod" field by the given
@@ -232,7 +231,7 @@ func (u *ProxyAddressUpdater) SyncWithPod(doc SpawnableDocument, pod *v1.Pod) (e
 
 	backend := NewProxyBackendFromPod(pod, port)
 	cache := NewProxyCache(u.Redis, 60*10)
-	return cache.SetAddress(doc.GetID().Hex(), backend.Addr())
+	return cache.SetAddress(doc.DeploymentID(), backend.Addr())
 }
 
 // NewProxyBackendFromPod creates the proxy backend struct from the pod object.
