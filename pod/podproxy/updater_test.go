@@ -29,7 +29,7 @@ func TestUpdater(t *testing.T) {
 	clientset, err := kubernetesService.NewClientset()
 	assert.NoError(t, err)
 
-	updater := DocumentProxyInfoUpdater{
+	updater := ProxyAddressUpdater{
 		Clientset: clientset,
 		Namespace: "default",
 		Redis:     redisService,

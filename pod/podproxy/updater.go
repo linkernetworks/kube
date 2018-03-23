@@ -71,7 +71,7 @@ type SpawnableDocument interface {
 	GetID() bson.ObjectId
 }
 
-type DocumentProxyInfoUpdater struct {
+type ProxyAddressUpdater struct {
 	Clientset *kubernetes.Clientset
 	Namespace string
 
@@ -81,7 +81,7 @@ type DocumentProxyInfoUpdater struct {
 	PortName string
 }
 
-func (u *DocumentProxyInfoUpdater) getPod(doc SpawnableDocument) (*v1.Pod, error) {
+func (u *ProxyAddressUpdater) getPod(doc SpawnableDocument) (*v1.Pod, error) {
 	return u.Clientset.CoreV1().Pods(u.Namespace).Get(doc.DeploymentID(), metav1.GetOptions{})
 }
 
@@ -116,7 +116,7 @@ func (u *DocumentProxyInfoUpdater) getPod(doc SpawnableDocument) (*v1.Pod, error
 //
 // See package "k8s.io/kubernetes/pkg/apis/core/types.go" for more details.
 
-func (u *DocumentProxyInfoUpdater) SyncDocument(doc SpawnableDocument) func(pod *v1.Pod) (stop bool) {
+func (u *ProxyAddressUpdater) SyncDocument(doc SpawnableDocument) func(pod *v1.Pod) (stop bool) {
 	podName := doc.DeploymentID()
 
 	return func(pod *v1.Pod) (stop bool) {
@@ -174,7 +174,7 @@ func (u *DocumentProxyInfoUpdater) SyncDocument(doc SpawnableDocument) func(pod 
 	}
 }
 
-func (u *DocumentProxyInfoUpdater) TrackAndSyncAdd(doc SpawnableDocument) (*podtracker.PodTracker, error) {
+func (u *ProxyAddressUpdater) TrackAndSyncAdd(doc SpawnableDocument) (*podtracker.PodTracker, error) {
 	podName := doc.DeploymentID()
 
 	tracker := podtracker.New(u.Clientset, u.Namespace, podName)
@@ -183,14 +183,14 @@ func (u *DocumentProxyInfoUpdater) TrackAndSyncAdd(doc SpawnableDocument) (*podt
 	return tracker, nil
 }
 
-func (u *DocumentProxyInfoUpdater) TrackAndSyncUpdate(doc SpawnableDocument) (*podtracker.PodTracker, error) {
+func (u *ProxyAddressUpdater) TrackAndSyncUpdate(doc SpawnableDocument) (*podtracker.PodTracker, error) {
 	podName := doc.DeploymentID()
 	tracker := podtracker.New(u.Clientset, u.Namespace, podName)
 	tracker.TrackUpdate(u.SyncDocument(doc))
 	return tracker, nil
 }
 
-func (u *DocumentProxyInfoUpdater) TrackAndSyncDelete(doc SpawnableDocument) (*podtracker.PodTracker, error) {
+func (u *ProxyAddressUpdater) TrackAndSyncDelete(doc SpawnableDocument) (*podtracker.PodTracker, error) {
 	podName := doc.DeploymentID()
 
 	tracker := podtracker.New(u.Clientset, u.Namespace, podName)
@@ -199,7 +199,7 @@ func (u *DocumentProxyInfoUpdater) TrackAndSyncDelete(doc SpawnableDocument) (*p
 	return tracker, nil
 }
 
-func (u *DocumentProxyInfoUpdater) Sync(doc SpawnableDocument) error {
+func (u *ProxyAddressUpdater) Sync(doc SpawnableDocument) error {
 	pod, err := u.getPod(doc)
 
 	if err != nil && kerrors.IsNotFound(err) {
@@ -215,14 +215,14 @@ func (u *DocumentProxyInfoUpdater) Sync(doc SpawnableDocument) error {
 	return u.SyncWithPod(doc, pod)
 }
 
-func (u *DocumentProxyInfoUpdater) Reset(doc SpawnableDocument) error {
+func (u *ProxyAddressUpdater) Reset(doc SpawnableDocument) error {
 	cache := NewProxyCache(u.Redis, 60*10)
 	return cache.RemoveAddress(doc.GetID().Hex())
 }
 
 // SyncWith updates the given document's "backend" and "pod" field by the given
 // pod object.
-func (u *DocumentProxyInfoUpdater) SyncWithPod(doc SpawnableDocument, pod *v1.Pod) (err error) {
+func (u *ProxyAddressUpdater) SyncWithPod(doc SpawnableDocument, pod *v1.Pod) (err error) {
 	logger.Debugf("Syncing document: %s", doc.DeploymentID())
 
 	port, ok := podutil.FindContainerPort(pod, u.PortName)
