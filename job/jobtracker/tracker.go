@@ -27,7 +27,7 @@ func New(clientset *kubernetes.Clientset, namespace string, podName string) *Job
 	return &JobTracker{clientset, namespace, podName, make(chan struct{})}
 }
 
-func matchPodName(obj interface{}, podName string) (*batchv1.Job, bool) {
+func matchJobName(obj interface{}, podName string) (*batchv1.Job, bool) {
 	pod, ok := obj.(*batchv1.Job)
 	if !ok {
 		return nil, false
@@ -59,7 +59,7 @@ func (t *JobTracker) WaitForPhase(waitPhase types.Phase) {
 func (t *JobTracker) TrackAdd(callback JobReceiver) {
 	_, controller := kubemon.WatchJobs(t.clientset, t.namespace, fields.Everything(), cache.ResourceEventHandlerFuncs{
 		AddFunc: func(newObj interface{}) {
-			if pod, ok := matchPodName(newObj, t.podName); ok {
+			if pod, ok := matchJobName(newObj, t.podName); ok {
 				if callback(pod) {
 					t.Stop()
 				}
@@ -72,7 +72,7 @@ func (t *JobTracker) TrackAdd(callback JobReceiver) {
 func (t *JobTracker) TrackUpdate(callback JobReceiver) {
 	_, controller := kubemon.WatchJobs(t.clientset, t.namespace, fields.Everything(), cache.ResourceEventHandlerFuncs{
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			if pod, ok := matchPodName(newObj, t.podName); ok {
+			if pod, ok := matchJobName(newObj, t.podName); ok {
 				if callback(pod) {
 					t.Stop()
 				}
@@ -85,7 +85,7 @@ func (t *JobTracker) TrackUpdate(callback JobReceiver) {
 func (t *JobTracker) TrackDelete(callback JobReceiver) {
 	_, controller := kubemon.WatchJobs(t.clientset, t.namespace, fields.Everything(), cache.ResourceEventHandlerFuncs{
 		DeleteFunc: func(obj interface{}) {
-			if pod, ok := matchPodName(obj, t.podName); ok {
+			if pod, ok := matchJobName(obj, t.podName); ok {
 				if callback(pod) {
 					t.Stop()
 				}
