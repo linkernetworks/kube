@@ -2,6 +2,7 @@ package jobtracker
 
 import (
 	"fmt"
+	"os"
 	"sync"
 	"testing"
 
@@ -9,6 +10,7 @@ import (
 	"bitbucket.org/linkernetworks/aurora/src/jobcontroller/types"
 	"bitbucket.org/linkernetworks/aurora/src/logger"
 	"bitbucket.org/linkernetworks/aurora/src/service/kubernetes"
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/mgo.v2/bson"
@@ -35,6 +37,12 @@ func CreateKubernetesSleepJob(name string, seconds int) *batchv1.Job {
 							Name:    "i-will-sleep",
 							Image:   "alpine:latest",
 							Command: []string{"/bin/sh", "-c", fmt.Sprintf("sleep %d", seconds)},
+							Resources: v1.ResourceRequirements{
+								Limits: v1.ResourceList{"cpu": resource.MustParse("20m")},
+								Requests: v1.ResourceList{
+									"cpu": resource.MustParse("10m"),
+								},
+							},
 						},
 					},
 					RestartPolicy: "Never",
@@ -46,6 +54,10 @@ func CreateKubernetesSleepJob(name string, seconds int) *batchv1.Job {
 }
 
 func TestJobTracker(t *testing.T) {
+	if _, defined := os.LookupEnv("TEST_K8S"); !defined {
+		t.SkipNow()
+		return
+	}
 	//Create a K8S Job
 	cf := config.MustRead(testingConfigPath)
 	kubernetesService := kubernetes.NewFromConfig(cf.Kubernetes)
@@ -57,7 +69,7 @@ func TestJobTracker(t *testing.T) {
 	kubejob := CreateKubernetesSleepJob(id, 2)
 
 	resp, err := clientset.BatchV1().Jobs(kubeNamespce).Create(kubejob)
-
+	assert.NotNil(t, resp)
 	//Wait Phase
 	tracker := New(clientset, kubeNamespce, kubejob.Name)
 	tracker.WaitForPhase(types.PhaseSucceeded)
@@ -66,7 +78,6 @@ func TestJobTracker(t *testing.T) {
 	var m sync.Mutex
 	var cv = sync.NewCond(&m)
 	m.Lock()
-
 	var handler = func(job *batchv1.Job) (stop bool) {
 		logger.Infof("Waiting for job delete Event")
 		m.Lock()
@@ -75,7 +86,6 @@ func TestJobTracker(t *testing.T) {
 		return stop
 	}
 	tracker.TrackDelete(handler)
-	assert.NotNil(t, resp)
 	assert.NoError(t, err)
 
 	//Delete K8S Job
