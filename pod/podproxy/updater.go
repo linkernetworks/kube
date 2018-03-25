@@ -82,7 +82,8 @@ func (u *ProxyAddressUpdater) getPod(doc SpawnableDocument) (*v1.Pod, error) {
 	return u.Clientset.CoreV1().Pods(u.Namespace).Get(doc.DeploymentID(), metav1.GetOptions{})
 }
 
-// TrackAndSync tracks the pod of the owner document and returns a pod tracker
+// SyncDocument returns a function that handles the pod changes received from the pod tracker.
+//
 // The following comments are copied from the kubernetes repository:
 //
 //     PodPending means the pod has been accepted by the system, but one or more of the containers
@@ -112,7 +113,6 @@ func (u *ProxyAddressUpdater) getPod(doc SpawnableDocument) (*v1.Pod, error) {
 //    		PodUnknown PodPhase = "Unknown"
 //
 // See package "k8s.io/kubernetes/pkg/apis/core/types.go" for more details.
-
 func (u *ProxyAddressUpdater) SyncDocument(doc SpawnableDocument) func(pod *v1.Pod) (stop bool) {
 	podName := doc.DeploymentID()
 

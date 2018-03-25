@@ -29,9 +29,9 @@ func TestDiscoverVisibleNodes(t *testing.T) {
 	clientset, err := ksvc.NewClientset()
 	assert.NoError(t, err)
 
-	assert.Equal(t, "ExternalIP", cf.Kubernetes.OutCluster.AddressType)
+	// assert.Equal(t, "ExternalIP", cf.Kubernetes.OutCluster.AddressType)
 
-	node, addr, err := DiscoverVisibleNode(clientset, "ExternalIP")
+	node, addr, err := DiscoverVisibleNode(clientset)
 	assert.NoError(t, err)
 	assert.NotNil(t, node)
 

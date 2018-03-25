@@ -114,7 +114,13 @@ func Rewrite(clientset *kubernetes.Clientset, cf config.Config) (config.Config, 
 	var dst = cf
 	var err error
 
-	node, address, err := DiscoverVisibleNode(clientset, cf.Kubernetes.OutCluster.AddressType)
+	/*
+		if cf.Kubernetes.OutCluster.AddressType != "" {
+			node, address, err := DiscoverVisibleNodeByAddressType(clientset, cf.Kubernetes.OutCluster.AddressType)
+		}
+	*/
+
+	node, address, err := DiscoverVisibleNode(clientset)
 	if err != nil {
 		return dst, err
 	}
