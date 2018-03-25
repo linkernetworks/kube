@@ -215,12 +215,7 @@ func (u *ProxyAddressUpdater) Sync(doc SpawnableDocument) error {
 }
 
 func (u *ProxyAddressUpdater) Reset(doc SpawnableDocument) error {
-	cache := &ProxyCache{
-		Prefix:        "podproxy:",
-		ExpirySeconds: 60 * 10,
-		Redis:         u.Redis,
-	}
-	return cache.RemoveAddress(doc.DeploymentID())
+	return u.Cache.RemoveAddress(doc.DeploymentID())
 }
 
 // SyncWith updates the given document's "backend" and "pod" field by the given
@@ -234,12 +229,7 @@ func (u *ProxyAddressUpdater) SyncWithPod(doc SpawnableDocument, pod *v1.Pod) (e
 	}
 
 	backend := NewProxyBackendFromPod(pod, port)
-	cache := &ProxyCache{
-		Prefix:        "podproxy:",
-		ExpirySeconds: 60 * 10,
-		Redis:         u.Redis,
-	}
-	return cache.SetAddress(doc.DeploymentID(), backend.Addr())
+	return u.Cache.SetAddress(doc.DeploymentID(), backend.Addr())
 }
 
 // NewProxyBackendFromPod creates the proxy backend struct from the pod object.
