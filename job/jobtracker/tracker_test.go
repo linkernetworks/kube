@@ -35,7 +35,7 @@ func CreateKubernetesSleepJob(name string, seconds int) *batchv1.Job {
 					Containers: []v1.Container{
 						{
 							Name:    "i-will-sleep",
-							Image:   "alpine:latest",
+							Image:   "alpine:3.7",
 							Command: []string{"/bin/sh", "-c", fmt.Sprintf("sleep %d", seconds)},
 							Resources: v1.ResourceRequirements{
 								Limits: v1.ResourceList{"cpu": resource.MustParse("20m")},
