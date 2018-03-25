@@ -53,10 +53,11 @@ func (c *ProxyCache) GetAddress(docID string, fetch AddressFetcher) (address str
 	if err == redigo.ErrNil {
 		retaddr, err := fetch()
 		if err != nil {
-			return "", err
+			return retaddr, err
 		}
+		address = retaddr
 		if err := c.setCacheAddress(conn, cacheKey, retaddr); err != nil {
-			return "", err
+			return retaddr, err
 		}
 		return retaddr, nil
 	} else if err != nil {
