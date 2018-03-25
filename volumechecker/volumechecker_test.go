@@ -25,7 +25,7 @@ const (
 )
 
 func TestMountSuccess(t *testing.T) {
-	if _, defined := os.LookupEnv("TEST_K8S"); !defined {
+	if _, defined := os.LookupEnv("TEST_K8S_PVC"); !defined {
 		t.SkipNow()
 		return
 	}
@@ -65,7 +65,7 @@ func TestMountSuccess(t *testing.T) {
 }
 
 func TestMountFail(t *testing.T) {
-	if _, defined := os.LookupEnv("TEST_K8S"); !defined {
+	if _, defined := os.LookupEnv("TEST_K8S_PVC"); !defined {
 		t.SkipNow()
 		return
 	}
