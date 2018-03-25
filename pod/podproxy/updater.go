@@ -80,7 +80,7 @@ func (u *ProxyAddressUpdater) getPod(app SpawnableApplication) (*v1.Pod, error) 
 	return u.Clientset.CoreV1().Pods(u.Namespace).Get(app.DeploymentID(), metav1.GetOptions{})
 }
 
-// SyncDocument returns a function that handles the pod changes received from the pod tracker.
+// NewSyncHandler returns a function that handles the pod changes received from the pod tracker.
 //
 // The following comments are copied from the kubernetes repository:
 //
@@ -111,7 +111,7 @@ func (u *ProxyAddressUpdater) getPod(app SpawnableApplication) (*v1.Pod, error) 
 //    		PodUnknown PodPhase = "Unknown"
 //
 // See package "k8s.io/kubernetes/pkg/apis/core/types.go" for more details.
-func (u *ProxyAddressUpdater) SyncDocument(app SpawnableApplication) func(pod *v1.Pod) (stop bool) {
+func (u *ProxyAddressUpdater) NewSyncHandler(app SpawnableApplication) func(pod *v1.Pod) (stop bool) {
 	podName := app.DeploymentID()
 
 	return func(pod *v1.Pod) (stop bool) {
@@ -174,14 +174,14 @@ func (u *ProxyAddressUpdater) TrackAndSyncAdd(app SpawnableApplication) (*podtra
 
 	tracker := podtracker.New(u.Clientset, u.Namespace, podName)
 
-	tracker.TrackAdd(u.SyncDocument(app))
+	tracker.TrackAdd(u.NewSyncHandler(app))
 	return tracker, nil
 }
 
 func (u *ProxyAddressUpdater) TrackAndSyncUpdate(app SpawnableApplication) (*podtracker.PodTracker, error) {
 	podName := app.DeploymentID()
 	tracker := podtracker.New(u.Clientset, u.Namespace, podName)
-	tracker.TrackUpdate(u.SyncDocument(app))
+	tracker.TrackUpdate(u.NewSyncHandler(app))
 	return tracker, nil
 }
 
@@ -190,7 +190,7 @@ func (u *ProxyAddressUpdater) TrackAndSyncDelete(app SpawnableApplication) (*pod
 
 	tracker := podtracker.New(u.Clientset, u.Namespace, podName)
 
-	tracker.TrackDelete(u.SyncDocument(app))
+	tracker.TrackDelete(u.NewSyncHandler(app))
 	return tracker, nil
 }
 
