@@ -47,3 +47,17 @@ func NewVolumeMounts(defs []container.Volume) (mounts []v1.VolumeMount) {
 
 	return mounts
 }
+
+func AttachVolumesToPod(defs []container.Volume, pod *v1.Pod) {
+	pod.Spec.Volumes = append(pod.Spec.Volumes, NewVolumes(defs)...)
+	for idx, container := range pod.Spec.Containers {
+		pod.Spec.Containers[idx].VolumeMounts = append(container.VolumeMounts, NewVolumeMounts(defs)...)
+	}
+}
+
+func AttachVolumeToPod(def *container.Volume, pod *v1.Pod) {
+	pod.Spec.Volumes = append(pod.Spec.Volumes, NewVolume(def))
+	for idx, container := range pod.Spec.Containers {
+		pod.Spec.Containers[idx].VolumeMounts = append(container.VolumeMounts, NewVolumeMount(def))
+	}
+}
