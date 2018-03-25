@@ -72,6 +72,8 @@ type ProxyAddressUpdater struct {
 	Clientset *kubernetes.Clientset
 	Namespace string
 
+	Cache *ProxyCache
+
 	Redis *redis.Service
 
 	// The PortName of the Pod
@@ -213,7 +215,11 @@ func (u *ProxyAddressUpdater) Sync(doc SpawnableDocument) error {
 }
 
 func (u *ProxyAddressUpdater) Reset(doc SpawnableDocument) error {
-	cache := NewProxyCache(u.Redis, 60*10)
+	cache := &ProxyCache{
+		Prefix:        "podproxy:",
+		ExpirySeconds: 60 * 10,
+		Redis:         u.Redis,
+	}
 	return cache.RemoveAddress(doc.DeploymentID())
 }
 
@@ -228,7 +234,11 @@ func (u *ProxyAddressUpdater) SyncWithPod(doc SpawnableDocument, pod *v1.Pod) (e
 	}
 
 	backend := NewProxyBackendFromPod(pod, port)
-	cache := NewProxyCache(u.Redis, 60*10)
+	cache := &ProxyCache{
+		Prefix:        "podproxy:",
+		ExpirySeconds: 60 * 10,
+		Redis:         u.Redis,
+	}
 	return cache.SetAddress(doc.DeploymentID(), backend.Addr())
 }
 
