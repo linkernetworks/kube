@@ -9,8 +9,6 @@ import (
 	"bitbucket.org/linkernetworks/aurora/src/kubernetes/types"
 	"bitbucket.org/linkernetworks/aurora/src/logger"
 
-	"bitbucket.org/linkernetworks/aurora/src/service/redis"
-
 	"k8s.io/client-go/kubernetes"
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -74,14 +72,12 @@ type ProxyAddressUpdater struct {
 
 	Cache *ProxyCache
 
-	Redis *redis.Service
-
 	// The PortName of the Pod
 	PortName string
 }
 
-func (u *ProxyAddressUpdater) getPod(doc SpawnableApplication) (*v1.Pod, error) {
-	return u.Clientset.CoreV1().Pods(u.Namespace).Get(doc.DeploymentID(), metav1.GetOptions{})
+func (u *ProxyAddressUpdater) getPod(app SpawnableApplication) (*v1.Pod, error) {
+	return u.Clientset.CoreV1().Pods(u.Namespace).Get(app.DeploymentID(), metav1.GetOptions{})
 }
 
 // SyncDocument returns a function that handles the pod changes received from the pod tracker.
@@ -115,8 +111,8 @@ func (u *ProxyAddressUpdater) getPod(doc SpawnableApplication) (*v1.Pod, error) 
 //    		PodUnknown PodPhase = "Unknown"
 //
 // See package "k8s.io/kubernetes/pkg/apis/core/types.go" for more details.
-func (u *ProxyAddressUpdater) SyncDocument(doc SpawnableApplication) func(pod *v1.Pod) (stop bool) {
-	podName := doc.DeploymentID()
+func (u *ProxyAddressUpdater) SyncDocument(app SpawnableApplication) func(pod *v1.Pod) (stop bool) {
+	podName := app.DeploymentID()
 
 	return func(pod *v1.Pod) (stop bool) {
 		phase := pod.Status.Phase
@@ -124,7 +120,7 @@ func (u *ProxyAddressUpdater) SyncDocument(doc SpawnableApplication) func(pod *v
 
 		switch phase {
 		case v1.PodPending:
-			if err := u.SyncWithPod(doc, pod); err != nil {
+			if err := u.SyncWithPod(app, pod); err != nil {
 				logger.Errorf("podproxy: failed to sync address: pod=%s error=%v", podName, err)
 			}
 
@@ -158,7 +154,7 @@ func (u *ProxyAddressUpdater) SyncDocument(doc SpawnableApplication) func(pod *v
 		// Stop the tracker if the status is completion status.
 		// Terminating won't be catched
 		case v1.PodRunning, v1.PodFailed, v1.PodSucceeded, v1.PodUnknown:
-			if err := u.SyncWithPod(doc, pod); err != nil {
+			if err := u.SyncWithPod(app, pod); err != nil {
 				logger.Errorf("podproxy: failed to sync document: pod=%s error=%v", podName, err)
 			}
 
@@ -173,55 +169,55 @@ func (u *ProxyAddressUpdater) SyncDocument(doc SpawnableApplication) func(pod *v
 	}
 }
 
-func (u *ProxyAddressUpdater) TrackAndSyncAdd(doc SpawnableApplication) (*podtracker.PodTracker, error) {
-	podName := doc.DeploymentID()
+func (u *ProxyAddressUpdater) TrackAndSyncAdd(app SpawnableApplication) (*podtracker.PodTracker, error) {
+	podName := app.DeploymentID()
 
 	tracker := podtracker.New(u.Clientset, u.Namespace, podName)
 
-	tracker.TrackAdd(u.SyncDocument(doc))
+	tracker.TrackAdd(u.SyncDocument(app))
 	return tracker, nil
 }
 
-func (u *ProxyAddressUpdater) TrackAndSyncUpdate(doc SpawnableApplication) (*podtracker.PodTracker, error) {
-	podName := doc.DeploymentID()
+func (u *ProxyAddressUpdater) TrackAndSyncUpdate(app SpawnableApplication) (*podtracker.PodTracker, error) {
+	podName := app.DeploymentID()
 	tracker := podtracker.New(u.Clientset, u.Namespace, podName)
-	tracker.TrackUpdate(u.SyncDocument(doc))
+	tracker.TrackUpdate(u.SyncDocument(app))
 	return tracker, nil
 }
 
-func (u *ProxyAddressUpdater) TrackAndSyncDelete(doc SpawnableApplication) (*podtracker.PodTracker, error) {
-	podName := doc.DeploymentID()
+func (u *ProxyAddressUpdater) TrackAndSyncDelete(app SpawnableApplication) (*podtracker.PodTracker, error) {
+	podName := app.DeploymentID()
 
 	tracker := podtracker.New(u.Clientset, u.Namespace, podName)
 
-	tracker.TrackDelete(u.SyncDocument(doc))
+	tracker.TrackDelete(u.SyncDocument(app))
 	return tracker, nil
 }
 
-func (u *ProxyAddressUpdater) Sync(doc SpawnableApplication) error {
-	pod, err := u.getPod(doc)
+func (u *ProxyAddressUpdater) Sync(app SpawnableApplication) error {
+	pod, err := u.getPod(app)
 
 	if err != nil && kerrors.IsNotFound(err) {
 
-		return u.Reset(doc)
+		return u.Reset(app)
 
 	} else if err != nil {
 
-		u.Reset(doc)
+		u.Reset(app)
 		return err
 	}
 
-	return u.SyncWithPod(doc, pod)
+	return u.SyncWithPod(app, pod)
 }
 
-func (u *ProxyAddressUpdater) Reset(doc SpawnableApplication) error {
-	return u.Cache.RemoveAddress(doc.DeploymentID())
+func (u *ProxyAddressUpdater) Reset(app SpawnableApplication) error {
+	return u.Cache.RemoveAddress(app.DeploymentID())
 }
 
 // SyncWith updates the given document's "backend" and "pod" field by the given
 // pod object.
-func (u *ProxyAddressUpdater) SyncWithPod(doc SpawnableApplication, pod *v1.Pod) (err error) {
-	logger.Debugf("podproxy: syncing document proxy info: %s", doc.DeploymentID())
+func (u *ProxyAddressUpdater) SyncWithPod(app SpawnableApplication, pod *v1.Pod) (err error) {
+	logger.Debugf("podproxy: syncing document proxy info: %s", app.DeploymentID())
 
 	port, ok := podutil.FindContainerPort(pod, u.PortName)
 	if !ok {
@@ -229,7 +225,7 @@ func (u *ProxyAddressUpdater) SyncWithPod(doc SpawnableApplication, pod *v1.Pod)
 	}
 
 	backend := NewProxyBackendFromPod(pod, port)
-	return u.Cache.SetAddress(doc.DeploymentID(), backend.Addr())
+	return u.Cache.SetAddress(app.DeploymentID(), backend.Addr())
 }
 
 // NewProxyBackendFromPod creates the proxy backend struct from the pod object.
