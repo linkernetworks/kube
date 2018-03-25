@@ -40,6 +40,7 @@ func TestMountSuccess(t *testing.T) {
 	assert.NotNil(t, pod)
 
 	newPod, err := clientset.CoreV1().Pods(namespace).Create(&pod)
+	defer clientset.CoreV1().Pods(namespace).Delete(newPod.ObjectMeta.Name, &metav1.DeleteOptions{})
 	assert.NoError(t, err)
 	//Wait the POD
 	//Create a channel here
@@ -56,12 +57,11 @@ func TestMountSuccess(t *testing.T) {
 	})
 	go controller.Run(stop)
 
-	err = Check(o, newPod.ObjectMeta.Name, 20)
+	err = Check(o, newPod.ObjectMeta.Name, 30)
 	var e struct{}
 	stop <- e
 	assert.NoError(t, err)
 
-	clientset.CoreV1().Pods(namespace).Delete(newPod.ObjectMeta.Name, &metav1.DeleteOptions{})
 }
 
 func TestMountFail(t *testing.T) {
@@ -91,6 +91,7 @@ func TestMountFail(t *testing.T) {
 	assert.NotNil(t, pod)
 
 	newPod, err := clientset.CoreV1().Pods(namespace).Create(&pod)
+	defer clientset.CoreV1().Pods(namespace).Delete(newPod.ObjectMeta.Name, &metav1.DeleteOptions{})
 	assert.NoError(t, err)
 	//Wait the POD
 	//Create a channel here
@@ -113,5 +114,4 @@ func TestMountFail(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Equal(t, err, ErrMountUnAvailable)
-	clientset.CoreV1().Pods(namespace).Delete(newPod.ObjectMeta.Name, &metav1.DeleteOptions{})
 }
