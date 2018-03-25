@@ -28,9 +28,9 @@ func (c *ProxyCache) setCacheAddress(conn *redis.Connection, cacheKey string, ad
 	return nil
 }
 
-func (c *ProxyCache) SetAddress(docID string, address string) error {
+func (c *ProxyCache) SetAddress(key string, address string) error {
 	conn := c.Redis.GetConnection()
-	cacheKey := c.Prefix + docID
+	cacheKey := c.Prefix + key
 	return c.setCacheAddress(conn, cacheKey, address)
 }
 
