@@ -5,6 +5,7 @@ import (
 	"time"
 
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -25,6 +26,12 @@ func NewVolumeCheckPod(id string) v1.Pod {
 				Name:            name,
 				ImagePullPolicy: v1.PullPolicy("IfNotPresent"),
 				Command:         []string{"sleep", "100"},
+				Resources: v1.ResourceRequirements{
+					Limits: v1.ResourceList{"cpu": resource.MustParse("20m")},
+					Requests: v1.ResourceList{
+						"cpu": resource.MustParse("10m"),
+					},
+				},
 			},
 			},
 		},
