@@ -15,9 +15,11 @@ type ProxyCache struct {
 
 type AddressFetcher func() (address string, err error)
 
+const DefaultPrefix = "podproxy:"
+
 func NewDefaultProxyCache(rds *redis.Service) *ProxyCache {
 	return &ProxyCache{
-		Prefix:        "podproxy:",
+		Prefix:        DefaultPrefix,
 		ExpirySeconds: 60 * 10,
 		Redis:         rds,
 	}
