@@ -118,12 +118,12 @@ func (u *ProxyAddressUpdater) SyncDocument(doc SpawnableDocument) func(pod *v1.P
 
 	return func(pod *v1.Pod) (stop bool) {
 		phase := pod.Status.Phase
-		logger.Infof("Found change: pod=%s phase=%s", podName, phase)
+		logger.Infof("podproxy: found change: pod=%s phase=%s", podName, phase)
 
 		switch phase {
 		case v1.PodPending:
 			if err := u.SyncWithPod(doc, pod); err != nil {
-				logger.Errorf("Failed to sync address: pod=%s error=%v", podName, err)
+				logger.Errorf("podproxy: failed to sync address: pod=%s error=%v", podName, err)
 			}
 
 			// Check all containers status in a pod. can't be ErrImagePull or ImagePullBackOff
@@ -133,7 +133,7 @@ func (u *ProxyAddressUpdater) SyncDocument(doc SpawnableDocument) func(pod *v1.P
 				switch reason {
 				case "PodInitializing", "ContainerCreating":
 					// Skip the standard states
-					logger.Infof("Container %s state is %s", cs.ContainerID, reason)
+					logger.Infof("podproxy: container state %s", reason)
 
 				case "ErrImageInspect",
 					"ErrImagePullBackOff",
@@ -141,14 +141,14 @@ func (u *ProxyAddressUpdater) SyncDocument(doc SpawnableDocument) func(pod *v1.P
 					"ErrImageNeverPull",
 					"RegistryUnavailable",
 					"ErrInvalidImageName":
-					logger.Errorf("Container %s is waiting. Reason=%s", cs.ContainerID, reason)
+					logger.Errorf("podproxy: container is waiting: reason=%s", cs.ContainerID, reason)
 
 					// stop tracking
 					stop = true
 					return stop
 
 				default:
-					logger.Errorf("Unexpected reason=%s", reason)
+					logger.Errorf("podproxy: unexpected reason=%s", reason)
 
 				}
 			}
@@ -157,13 +157,13 @@ func (u *ProxyAddressUpdater) SyncDocument(doc SpawnableDocument) func(pod *v1.P
 		// Terminating won't be catched
 		case v1.PodRunning, v1.PodFailed, v1.PodSucceeded, v1.PodUnknown:
 			if err := u.SyncWithPod(doc, pod); err != nil {
-				logger.Errorf("Failed to sync document: pod=%s error=%v", podName, err)
+				logger.Errorf("podproxy: failed to sync document: pod=%s error=%v", podName, err)
 			}
 
 			stop = true
 			return stop
 		default:
-			logger.Errorf("phase not handled: %s", phase)
+			logger.Errorf("podproxy: phase %s not handled.", phase)
 		}
 
 		stop = false
