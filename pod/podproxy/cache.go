@@ -40,19 +40,23 @@ func (c *ProxyCache) get(conn *redis.Connection, key string) (val string, err er
 	return val, err
 }
 
-func (c *ProxyCache) SetAddress(key string, address string) error {
+func (c *ProxyCache) SetAddress(id string, address string) error {
+	var key = id + ":address"
 	var conn = c.Redis.GetConnection()
 	return c.set(conn, key, address)
 }
 
-func (c *ProxyCache) RemoveAddress(key string) error {
+func (c *ProxyCache) RemoveAddress(id string) error {
+	var key = id + ":address"
 	var conn = c.Redis.GetConnection()
 	defer conn.Close()
 	return c.unset(conn, key)
 }
 
 // GetAddress uses the redis connection to get the address
-func (c *ProxyCache) GetAddress(key string, fetch AddressFetcher) (address string, err error) {
+func (c *ProxyCache) GetAddress(id string, fetch AddressFetcher) (address string, err error) {
+	var key = id + ":address"
+
 	// Get the document and its pod info cache from redis
 	var conn = c.Redis.GetConnection()
 	defer conn.Close()
