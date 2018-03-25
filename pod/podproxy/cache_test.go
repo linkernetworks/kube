@@ -58,7 +58,7 @@ func TestCacheSetAddress(t *testing.T) {
 	defer cache.RemoveAddress("testing-foo-get")
 	assert.NoError(t, err)
 
-	val, err := cache.GetAddress("testing-foo-set", func() (string, error) {
+	val, err := cache.GetAddressWith("testing-foo-set", func() (string, error) {
 		return "11.22.33.44", nil
 	})
 	assert.NoError(t, err)
@@ -76,7 +76,7 @@ func TestCacheGetAddress(t *testing.T) {
 	cache.RemoveAddress("testing-foo-get")
 
 	var call = false
-	val, err := cache.GetAddress("testing-foo-get", func() (string, error) {
+	val, err := cache.GetAddressWith("testing-foo-get", func() (string, error) {
 		call = true
 		return "11.22.33.44", nil
 	})
@@ -86,7 +86,7 @@ func TestCacheGetAddress(t *testing.T) {
 	assert.True(t, call)
 
 	call = false
-	val, err = cache.GetAddress("testing-foo-get", func() (string, error) {
+	val, err = cache.GetAddressWith("testing-foo-get", func() (string, error) {
 		call = true
 		return "11.22.33.44", nil
 	})

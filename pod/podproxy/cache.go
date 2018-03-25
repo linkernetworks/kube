@@ -55,8 +55,8 @@ func (c *ProxyCache) RemoveAddress(id string) error {
 	return c.unset(conn, key)
 }
 
-// GetAddress uses the redis connection to get the address
-func (c *ProxyCache) GetAddress(id string, fetch AddressFetcher) (address string, err error) {
+// GetAddressWith uses the redis connection to get the address
+func (c *ProxyCache) GetAddressWith(id string, fetch AddressFetcher) (address string, err error) {
 	var key = id + ":address"
 
 	// Get the document and its pod info cache from redis
