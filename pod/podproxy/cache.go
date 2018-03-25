@@ -15,12 +15,6 @@ type ProxyCache struct {
 
 type AddressFetcher func() (address string, err error)
 
-const DefaultProxyCachePrefix = "proxy:cache:address:"
-
-func NewProxyCache(r *redis.Service, expirySeconds int) *ProxyCache {
-	return &ProxyCache{DefaultProxyCachePrefix, r, expirySeconds}
-}
-
 func (c *ProxyCache) setCacheAddress(conn *redis.Connection, cacheKey string, address string) error {
 	if _, err := conn.SetWithExpire(cacheKey, address, c.ExpirySeconds); err != nil {
 		return fmt.Errorf("Failed to update proxy cache: %v", err)
