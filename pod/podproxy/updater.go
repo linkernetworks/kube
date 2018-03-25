@@ -220,7 +220,7 @@ func (u *ProxyAddressUpdater) Reset(doc SpawnableDocument) error {
 // SyncWith updates the given document's "backend" and "pod" field by the given
 // pod object.
 func (u *ProxyAddressUpdater) SyncWithPod(doc SpawnableDocument, pod *v1.Pod) (err error) {
-	logger.Debugf("Syncing document: %s", doc.DeploymentID())
+	logger.Debugf("podproxy: syncing document proxy info: %s", doc.DeploymentID())
 
 	port, ok := podutil.FindContainerPort(pod, u.PortName)
 	if !ok {
