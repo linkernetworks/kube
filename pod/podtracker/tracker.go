@@ -59,8 +59,8 @@ func (t *PodTracker) WaitForPhase(waitPhase v1.PodPhase) {
 func (t *PodTracker) TrackAdd(callback PodReceiver) {
 	_, controller := kubemon.WatchPods(t.clientset, t.namespace, fields.Everything(), cache.ResourceEventHandlerFuncs{
 		AddFunc: func(newObj interface{}) {
-			logger.Debugf("Pod Add: %v", newObj)
 			if pod, ok := matchPodName(newObj, t.podName); ok {
+				logger.Debugf("Received pod add: %s %s", pod.Name, pod.Status.Phase)
 				if callback(pod) {
 					t.Stop()
 				}
@@ -73,8 +73,8 @@ func (t *PodTracker) TrackAdd(callback PodReceiver) {
 func (t *PodTracker) TrackUpdate(callback PodReceiver) {
 	_, controller := kubemon.WatchPods(t.clientset, t.namespace, fields.Everything(), cache.ResourceEventHandlerFuncs{
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			logger.Debugf("Pod Update: %v", newObj)
 			if pod, ok := matchPodName(newObj, t.podName); ok {
+				logger.Debugf("Received pod update: %s %s", pod.Name, pod.Status.Phase)
 				if callback(pod) {
 					t.Stop()
 				}
@@ -87,7 +87,7 @@ func (t *PodTracker) TrackUpdate(callback PodReceiver) {
 func (t *PodTracker) TrackDelete(callback PodReceiver) {
 	_, controller := kubemon.WatchPods(t.clientset, t.namespace, fields.Everything(), cache.ResourceEventHandlerFuncs{
 		DeleteFunc: func(obj interface{}) {
-			logger.Debugf("Pod Delete: %v", obj)
+			logger.Debugf("Received pod delete: %s %s", pod.Name, pod.Status.Phase)
 			if pod, ok := matchPodName(obj, t.podName); ok {
 				if callback(pod) {
 					t.Stop()
