@@ -87,8 +87,8 @@ func (t *PodTracker) TrackUpdate(callback PodReceiver) {
 func (t *PodTracker) TrackDelete(callback PodReceiver) {
 	_, controller := kubemon.WatchPods(t.clientset, t.namespace, fields.Everything(), cache.ResourceEventHandlerFuncs{
 		DeleteFunc: func(obj interface{}) {
-			logger.Debugf("Received pod delete: %s %s", pod.Name, pod.Status.Phase)
 			if pod, ok := matchPodName(obj, t.podName); ok {
+				logger.Debugf("Received pod delete: %s %s", pod.Name, pod.Status.Phase)
 				if callback(pod) {
 					t.Stop()
 				}
