@@ -69,9 +69,11 @@ func (c *ProxyCache) GetAddressWith(id string, fetch AddressFetcher) (address st
 		retaddr, err := fetch()
 		if err != nil {
 			return retaddr, err
+		} else if len(retaddr) == 0 {
+			return "", fmt.Errorf("Empty pod IP address")
 		}
-		address = retaddr
 
+		address = retaddr
 		if err := c.set(conn, key, retaddr); err != nil {
 			return retaddr, err
 		}
