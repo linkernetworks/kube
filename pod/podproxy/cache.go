@@ -19,8 +19,9 @@ const DefaultPrefix = "podproxy:"
 
 func NewDefaultProxyCache(rds *redis.Service) *ProxyCache {
 	return &ProxyCache{
-		Prefix:        DefaultPrefix,
-		ExpirySeconds: 60 * 10,
+		Prefix: DefaultPrefix,
+		// TODO: load from config
+		ExpirySeconds: 60 * 10, // 10 minutes
 		Redis:         rds,
 	}
 }
