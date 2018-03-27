@@ -23,7 +23,7 @@ func TestUpdater(t *testing.T) {
 
 	cf := config.MustRead(testingConfigPath)
 
-	redisService := redis.NewPoolFromConfig(cf.Redis)
+	redisService := redis.New(cf.Redis)
 	kubernetesService := kubernetes.NewFromConfig(cf.Kubernetes)
 
 	clientset, err := kubernetesService.NewClientset()
