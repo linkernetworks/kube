@@ -140,6 +140,7 @@ func (u *ProxyAddressUpdater) NewSyncHandler(app SpawnableApplication) func(pod 
 			Update: &event.RecordUpdateEvent{
 				Document: "pod:" + podName,
 				Id:       docID,
+				Record:   app,
 				Setter: bson.M{
 					"status.phase":     pod.Status.Phase,
 					"status.message":   pod.Status.Message,
