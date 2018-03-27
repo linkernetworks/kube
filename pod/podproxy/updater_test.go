@@ -6,6 +6,7 @@ import (
 
 	"bitbucket.org/linkernetworks/aurora/src/config"
 	"bitbucket.org/linkernetworks/aurora/src/service/kubernetes"
+	"bitbucket.org/linkernetworks/aurora/src/service/redis"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -22,6 +23,7 @@ func TestUpdater(t *testing.T) {
 
 	cf := config.MustRead(testingConfigPath)
 
+	redisService := redis.NewPoolFromConfig((cf.Redis
 	kubernetesService := kubernetes.NewFromConfig(cf.Kubernetes)
 
 	clientset, err := kubernetesService.NewClientset()
@@ -31,6 +33,7 @@ func TestUpdater(t *testing.T) {
 		Clientset: clientset,
 		Namespace: "default",
 		PortName:  "mongo",
+		Redis: redisService,
 	}
 	_ = updater
 }
