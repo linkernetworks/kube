@@ -72,6 +72,10 @@ type SpawnableApplication interface {
 	types.DeploymentIDProvider
 }
 
+type DocumentID interface {
+	GetID() bson.ObjectId
+}
+
 type ProxyAddressUpdater struct {
 	Clientset *kubernetes.Clientset
 	Namespace string
@@ -126,10 +130,16 @@ func (u *ProxyAddressUpdater) NewSyncHandler(app SpawnableApplication) func(pod 
 		phase := pod.Status.Phase
 		logger.Infof("podproxy: found change: pod=%s phase=%s", podName, phase)
 
+		var docID string = ""
+		if docIDGetter, ok := app.(DocumentID); ok {
+			docID = docIDGetter.GetID().Hex()
+		}
+
 		u.emit(app, &event.RecordEvent{
 			Type: "record.update",
 			Update: &event.RecordUpdateEvent{
 				Document: "pod:" + podName,
+				Id:       docID,
 				Setter: bson.M{
 					"status.phase":     pod.Status.Phase,
 					"status.message":   pod.Status.Message,
