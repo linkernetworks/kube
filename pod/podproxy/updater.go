@@ -4,12 +4,18 @@ import (
 	"errors"
 
 	"bitbucket.org/linkernetworks/aurora/src/entity"
+	"bitbucket.org/linkernetworks/aurora/src/event"
+
+	"bitbucket.org/linkernetworks/aurora/src/service/redis"
+
 	"bitbucket.org/linkernetworks/aurora/src/kubernetes/pod/podtracker"
 	"bitbucket.org/linkernetworks/aurora/src/kubernetes/pod/podutil"
 	"bitbucket.org/linkernetworks/aurora/src/kubernetes/types"
 	"bitbucket.org/linkernetworks/aurora/src/logger"
 
 	"k8s.io/client-go/kubernetes"
+
+	"gopkg.in/mgo.v2/bson"
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 
@@ -66,11 +72,17 @@ type SpawnableApplication interface {
 	types.DeploymentIDProvider
 }
 
+type DocumentID interface {
+	GetID() bson.ObjectId
+}
+
 type ProxyAddressUpdater struct {
 	Clientset *kubernetes.Clientset
 	Namespace string
 
 	Cache *ProxyCache
+
+	Redis *redis.Service
 
 	// The PortName of the Pod
 	PortName string
@@ -117,6 +129,26 @@ func (u *ProxyAddressUpdater) NewSyncHandler(app SpawnableApplication) func(pod 
 	return func(pod *v1.Pod) (stop bool) {
 		phase := pod.Status.Phase
 		logger.Infof("podproxy: found change: pod=%s phase=%s", podName, phase)
+
+		var docID string = ""
+		if docIDGetter, ok := app.(DocumentID); ok {
+			docID = docIDGetter.GetID().Hex()
+		}
+
+		u.emit(app, &event.RecordEvent{
+			Type: "record.update",
+			Update: &event.RecordUpdateEvent{
+				Document: "pod:" + podName,
+				Id:       docID,
+				Record:   app,
+				Setter: bson.M{
+					"status.phase":     pod.Status.Phase,
+					"status.message":   pod.Status.Message,
+					"status.reason":    pod.Status.Reason,
+					"status.startTime": pod.Status.StartTime,
+				},
+			},
+		})
 
 		switch phase {
 		case v1.PodPending:
@@ -226,6 +258,10 @@ func (u *ProxyAddressUpdater) SyncWithPod(app SpawnableApplication, pod *v1.Pod)
 
 	backend := NewProxyBackendFromPod(pod, port)
 	return u.Cache.SetAddress(app.DeploymentID(), backend.Addr())
+}
+
+func (u *ProxyAddressUpdater) emit(app SpawnableApplication, e *event.RecordEvent) {
+	go u.Redis.PublishAndSetJSON(app.DeploymentID(), e)
 }
 
 // NewProxyBackendFromPod creates the proxy backend struct from the pod object.
