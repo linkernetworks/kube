@@ -1,6 +1,8 @@
 package testutils
 
 import (
+	"time"
+
 	batchV1 "k8s.io/api/batch/v1"
 	coreV1 "k8s.io/api/core/v1"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -50,5 +52,6 @@ func WaitUntilJobComplete(clientset *kubernetes.Clientset, namespace string, job
 		if j.Status.Succeeded > 0 || j.Status.Failed > 0 {
 			return nil
 		}
+		time.Sleep(200 * time.Millisecond)
 	}
 }
