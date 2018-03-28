@@ -3,25 +3,25 @@ package testutils
 import (
 	"time"
 
-	batchV1 "k8s.io/api/batch/v1"
-	coreV1 "k8s.io/api/core/v1"
-	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
-func CreateKubernetesDummyJob(name string) *batchV1.Job {
-	return &batchV1.Job{
-		TypeMeta: metaV1.TypeMeta{
+func CreateKubernetesDummyJob(name string) *batchv1.Job {
+	return &batchv1.Job{
+		TypeMeta: metav1.TypeMeta{
 			Kind:       "Job",
 			APIVersion: "batch/v1",
 		},
-		ObjectMeta: metaV1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Spec: batchV1.JobSpec{
-			Template: coreV1.PodTemplateSpec{
-				Spec: coreV1.PodSpec{
-					Containers: []coreV1.Container{
+		Spec: batchv1.JobSpec{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
 						{
 							Name:  name,
 							Image: "hello-world:latest",
@@ -34,18 +34,18 @@ func CreateKubernetesDummyJob(name string) *batchV1.Job {
 	}
 }
 
-func DeployKubenetesJob(clientset *kubernetes.Clientset, namespace string, job *batchV1.Job) (*batchV1.Job, error) {
+func DeployKubenetesJob(clientset *kubernetes.Clientset, namespace string, job *batchv1.Job) (*batchv1.Job, error) {
 	return clientset.BatchV1().Jobs(namespace).Create(job)
 }
 
-func DeleteKubenetesJob(clientset *kubernetes.Clientset, namespace string, job *batchV1.Job) error {
-	opts := metaV1.NewDeleteOptions(0)
+func DeleteKubenetesJob(clientset *kubernetes.Clientset, namespace string, job *batchv1.Job) error {
+	opts := metav1.NewDeleteOptions(0)
 	return clientset.BatchV1().Jobs(namespace).Delete(job.GetName(), opts)
 }
 
-func WaitUntilJobComplete(clientset *kubernetes.Clientset, namespace string, job *batchV1.Job) error {
+func WaitUntilJobComplete(clientset *kubernetes.Clientset, namespace string, job *batchv1.Job) error {
 	for {
-		j, err := clientset.BatchV1().Jobs(namespace).Get(job.GetName(), metaV1.GetOptions{})
+		j, err := clientset.BatchV1().Jobs(namespace).Get(job.GetName(), metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
