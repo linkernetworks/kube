@@ -55,3 +55,16 @@ func WaitUntilJobComplete(clientset *kubernetes.Clientset, namespace string, job
 		time.Sleep(200 * time.Millisecond)
 	}
 }
+
+func WaitUntilJobStart(clientset *kubernetes.Clientset, namespace string, job *batchV1.Job) error {
+	for {
+		j, err := clientset.BatchV1().Jobs(namespace).Get(job.GetName(), metaV1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		if j.Status.Active > 0 {
+			return nil
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+}
