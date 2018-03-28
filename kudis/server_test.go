@@ -94,7 +94,7 @@ func TestSubscribeJobLogs(t *testing.T) {
 	assert.NoError(t, err)
 
 	// should waiting the job state to succeed
-	err = testutils.WaitUntilContainerSucceed(clientset, "default", job)
+	err = testutils.WaitUntilJobComplete(clientset, "default", job)
 	assert.NoError(t, err)
 
 	var subscription Subscription = NewJobLogSubscription(rds, "default", dt, "hello", "hello", 10)
