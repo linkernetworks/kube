@@ -41,7 +41,7 @@ func DeleteKubenetesJob(clientset *kubernetes.Clientset, namespace string, job *
 	return clientset.BatchV1().Jobs(namespace).Delete(job.GetName(), opts)
 }
 
-func WaitUntilContainerSucceed(clientset *kubernetes.Clientset, namespace string, job *batchV1.Job) error {
+func WaitUntilJobComplete(clientset *kubernetes.Clientset, namespace string, job *batchV1.Job) error {
 	for {
 		j, err := clientset.BatchV1().Jobs(namespace).Get(job.GetName(), metaV1.GetOptions{})
 		if err != nil {
