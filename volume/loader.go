@@ -3,6 +3,7 @@ package volume
 import (
 	"bitbucket.org/linkernetworks/aurora/src/types/container"
 
+	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -59,5 +60,21 @@ func AttachVolumeToPod(def *container.Volume, pod *v1.Pod) {
 	pod.Spec.Volumes = append(pod.Spec.Volumes, NewVolume(def))
 	for idx, container := range pod.Spec.Containers {
 		pod.Spec.Containers[idx].VolumeMounts = append(container.VolumeMounts, NewVolumeMount(def))
+	}
+}
+
+func AttachVolumesToJob(defs []container.Volume, job *batchv1.Job) {
+	podSpec := job.Spec.Template.Spec
+	podSpec.Volumes = append(podSpec.Volumes, NewVolumes(defs)...)
+	for idx, container := range podSpec.Containers {
+		podSpec.Containers[idx].VolumeMounts = append(container.VolumeMounts, NewVolumeMounts(defs)...)
+	}
+}
+
+func AttachVolumeToJob(def *container.Volume, job *batchv1.Job) {
+	podSpec := job.Spec.Template.Spec
+	podSpec.Volumes = append(podSpec.Volumes, NewVolume(def))
+	for idx, container := range podSpec.Containers {
+		podSpec.Containers[idx].VolumeMounts = append(container.VolumeMounts, NewVolumeMount(def))
 	}
 }
