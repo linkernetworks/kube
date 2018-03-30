@@ -64,7 +64,7 @@ func AttachVolumeToPod(def *container.Volume, pod *v1.Pod) {
 }
 
 func AttachVolumesToJob(defs []container.Volume, job *batchv1.Job) {
-	podSpec := job.Spec.Template.Spec
+	podSpec := &job.Spec.Template.Spec
 	podSpec.Volumes = append(podSpec.Volumes, NewVolumes(defs)...)
 	for idx, container := range podSpec.Containers {
 		podSpec.Containers[idx].VolumeMounts = append(container.VolumeMounts, NewVolumeMounts(defs)...)
@@ -72,7 +72,7 @@ func AttachVolumesToJob(defs []container.Volume, job *batchv1.Job) {
 }
 
 func AttachVolumeToJob(def *container.Volume, job *batchv1.Job) {
-	podSpec := job.Spec.Template.Spec
+	podSpec := &job.Spec.Template.Spec
 	podSpec.Volumes = append(podSpec.Volumes, NewVolume(def))
 	for idx, container := range podSpec.Containers {
 		podSpec.Containers[idx].VolumeMounts = append(container.VolumeMounts, NewVolumeMount(def))
