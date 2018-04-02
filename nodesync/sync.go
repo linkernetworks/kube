@@ -45,7 +45,7 @@ func New(clientset *kubernetes.Clientset, m *mongo.Service, dt *deployment.KubeD
 
 	t, _ := strconv.Atoi(os.Getenv("NODE_RESOURCE_PERIODIC"))
 	if t == 0 {
-		t = 3
+		t = 30
 	}
 
 	return &NodeSync{
