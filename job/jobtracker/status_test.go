@@ -60,7 +60,7 @@ func TestTrackUntilCompletion(t *testing.T) {
 
 	in := tracker.TrackUntilCompletion("testing", fields.ParseSelectorOrDie("metadata.name="+created.Name))
 	for message := range in {
-		t.Logf("message: %+v", message)
+		t.Logf("message: phase=%+v", message.Phase)
 	}
 	// the watcher listen to the stop channel, we need to close the channel to stop the
 	// jitter wait loop
