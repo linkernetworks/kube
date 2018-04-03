@@ -1,11 +1,12 @@
 package summary
 
 import (
+	_ "log"
+	"strconv"
+
 	"bitbucket.org/linkernetworks/aurora/src/entity"
 	"bitbucket.org/linkernetworks/aurora/src/service/mongo"
 	"gopkg.in/mgo.v2/bson"
-	_ "log"
-	"strconv"
 )
 
 type JobGPUUsageSummary []JobGPUUsage
@@ -15,10 +16,10 @@ type JobGPUUsage struct {
 	NumGPU int
 }
 
-func QueryCurrentGpuUsageByUser(context *mongo.Session, uid bson.ObjectId) (JobGPUUsageSummary, error) {
+func QueryCurrentGpuUsageByUser(session *mongo.Session, uid bson.ObjectId) (JobGPUUsageSummary, error) {
 	var usageSummary []JobGPUUsage
 	var jobs []entity.Job
-	err := context.C(entity.JobCollectionName).Find(bson.M{"CreatedBy": uid}).All(&jobs)
+	err := session.C(entity.JobCollectionName).Find(bson.M{"CreatedBy": uid}).All(&jobs)
 	if err != nil {
 		return nil, err
 	}
