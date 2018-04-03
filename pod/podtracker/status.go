@@ -22,13 +22,13 @@ type PodStatusMessage struct {
 
 type PodStatusTracker struct {
 	Clientset *kubernetes.Clientset
+	stop      chan struct{}
 }
 
 // TrackUntilCompletion track the pod completion status until the pod reach the completion status.
-func (t *PodStatusTracker) TrackUntilCompletion(namespace string, selector fields.Selector) (chan PodStatusMessage, chan struct{}) {
-	var e struct{}
+func (t *PodStatusTracker) TrackUntilCompletion(namespace string, selector fields.Selector) chan PodStatusMessage {
+	t.stop = make(chan struct{})
 
-	var stop = make(chan struct{})
 	var o = make(chan PodStatusMessage)
 
 	var handlePodChange = func(pod *v1.Pod) bool {
@@ -66,19 +66,28 @@ func (t *PodStatusTracker) TrackUntilCompletion(namespace string, selector field
 			pod := newObj.(*v1.Pod)
 			if handlePodChange(pod) {
 				close(o)
-				stop <- e
+				t.Stop()
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			pod := newObj.(*v1.Pod)
 			if handlePodChange(pod) {
 				close(o)
-				stop <- e
+				t.Stop()
 			}
 		},
 	})
 
-	go controller.Run(stop)
+	go controller.Run(t.stop)
 
-	return o, stop
+	return o
+}
+
+func (t *PodStatusTracker) Stop() {
+	if t.stop != nil {
+		var e struct{}
+		t.stop <- e
+		close(t.stop)
+		t.stop = nil
+	}
 }

@@ -50,13 +50,11 @@ func TestTrackUntilCompletion(t *testing.T) {
 	t.Logf("pod created: pod=%s", created.Name)
 	defer clientset.Core().Pods("testing").Delete(created.Name, nil)
 
-	in, stopCh := tracker.TrackUntilCompletion("testing", fields.ParseSelectorOrDie("metadata.name="+created.Name))
+	in := tracker.TrackUntilCompletion("testing", fields.ParseSelectorOrDie("metadata.name="+created.Name))
 	for message := range in {
 		t.Logf("message: %+v", message)
 		assert.NotEmpty(t, message.Phase)
 		assert.Nil(t, message.Error)
 	}
-	// the watcher listen to the stop channel, we need to close the channel to stop the
-	// jitter wait loop
-	close(stopCh)
+	tracker.Stop()
 }
