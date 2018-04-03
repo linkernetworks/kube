@@ -18,6 +18,7 @@ type PodStatusMessage struct {
 	Phase   v1.PodPhase
 	Error   error
 	Message string
+	Pod     *v1.Pod
 }
 
 type PodStatusTracker struct {
@@ -35,7 +36,7 @@ func (t *PodStatusTracker) TrackUntilCompletion(namespace string, selector field
 		logger.Infof("Received pod update: name=%s phase=%s", pod.Name, pod.Status.Phase)
 		if pod.Status.Phase == v1.PodFailed || pod.Status.Phase == v1.PodSucceeded || pod.Status.Phase == v1.PodUnknown {
 			// send completion status message without error
-			o <- PodStatusMessage{pod.Status.Phase, nil, pod.Status.Message}
+			o <- PodStatusMessage{pod.Status.Phase, nil, pod.Status.Message, pod}
 			return true
 
 		} else if pod.Status.Phase == v1.PodPending {
@@ -53,7 +54,7 @@ func (t *PodStatusTracker) TrackUntilCompletion(namespace string, selector field
 
 					// from kubernetes/pkg/kubelet/container/sync_result.go
 					"CrashLoopBackOff":
-					o <- PodStatusMessage{pod.Status.Phase, errors.New(reason), cs.State.Waiting.Message}
+					o <- PodStatusMessage{pod.Status.Phase, errors.New(reason), cs.State.Waiting.Message, pod}
 					return true
 				}
 			}
