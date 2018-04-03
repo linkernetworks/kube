@@ -1,6 +1,10 @@
 package nodesync
 
 import (
+	"os"
+	"strconv"
+	"time"
+
 	"bitbucket.org/linkernetworks/aurora/src/deployment"
 	dnodes "bitbucket.org/linkernetworks/aurora/src/deployment/nodes"
 	"bitbucket.org/linkernetworks/aurora/src/entity"
@@ -9,13 +13,10 @@ import (
 	"bitbucket.org/linkernetworks/aurora/src/service/mongo"
 	"gopkg.in/mgo.v2/bson"
 	corev1 "k8s.io/api/core/v1"
-	"os"
-	"strconv"
 
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
-	"time"
 )
 
 type NodeStats struct {
@@ -44,7 +45,7 @@ func New(clientset *kubernetes.Clientset, m *mongo.Service, dt *deployment.KubeD
 
 	t, _ := strconv.Atoi(os.Getenv("NODE_RESOURCE_PERIODIC"))
 	if t == 0 {
-		t = 3
+		t = 30
 	}
 
 	return &NodeSync{
@@ -170,7 +171,7 @@ func (nts *NodeSync) Prune() error {
 
 func (nts *NodeSync) NodeRoutine() {
 	logger.Infof("Node routine periodic time is set to %d minutes", nts.t)
-	ticker := time.NewTicker(time.Duration(nts.t) * time.Minute)
+	ticker := time.NewTicker(time.Duration(nts.t) * time.Second)
 	for {
 		select {
 		case <-ticker.C:
