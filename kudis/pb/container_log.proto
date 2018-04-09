@@ -6,6 +6,7 @@ option go_package = "messages";
 
 service SubscriptionService {
   rpc SubscribePodLogs(PodLogSubscriptionRequest) returns (SubscriptionResponse) {}
+  rpc SubscribeJobLogs(JobLogSubscriptionRequest) returns (SubscriptionResponse) {}
   rpc SubscribePodEvent(PodEventSubscriptionRequest) returns (SubscriptionResponse) {}
 }
 
