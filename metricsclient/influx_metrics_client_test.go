@@ -15,18 +15,18 @@ const (
 	influxURL = "http://monitoring-influxdb.kube-system:8086"
 )
 
-func newTestInfluxMetricsClient(t *testing.T) *InfluxMetricsClient {
+func newTestMetricsClient(t *testing.T) *InfluxMetricsClient {
 	t.Helper()
 
 	ic := testutils.NewMockInfluxDBClient()
 	assert.NotNil(t, ic)
 
-	return NewInfluxMetricsClient(ic)
+	return NewForInfluxdb(ic)
 }
 
 // InfluxMetricsClient must implement MetricsClient
 func TestImplementation(t *testing.T) {
-	c := newTestInfluxMetricsClient(t)
+	c := newTestMetricsClient(t)
 
 	// if it's not implemented, build error
 	var _ MetricsClient = c
@@ -38,12 +38,12 @@ func TestNewInfluxMetricsClient(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	c := NewInfluxMetricsClient(ic)
+	c := NewForInfluxdb(ic)
 	assert.NotNil(t, c)
 }
 
 func TestUse(t *testing.T) {
-	c := newTestInfluxMetricsClient(t)
+	c := newTestMetricsClient(t)
 
 	var db = "test"
 	err := c.Use(db)
@@ -53,7 +53,7 @@ func TestUse(t *testing.T) {
 }
 
 func TestQueryNamespaces(t *testing.T) {
-	c := newTestInfluxMetricsClient(t)
+	c := newTestMetricsClient(t)
 
 	ns, err := c.QueryNamespaces()
 
@@ -64,7 +64,7 @@ func TestQueryNamespaces(t *testing.T) {
 }
 
 func TestQueryNodes(t *testing.T) {
-	c := newTestInfluxMetricsClient(t)
+	c := newTestMetricsClient(t)
 
 	nodes, err := c.QueryNodes()
 
@@ -74,7 +74,7 @@ func TestQueryNodes(t *testing.T) {
 }
 
 func TestQueryNodeCPUUsages(t *testing.T) {
-	c := newTestInfluxMetricsClient(t)
+	c := newTestMetricsClient(t)
 
 	usages, err := c.QueryNodeCPUUsages("docker-for-desktop", 10)
 
@@ -84,7 +84,7 @@ func TestQueryNodeCPUUsages(t *testing.T) {
 }
 
 func TestQueryLastestNodeCPU(t *testing.T) {
-	c := newTestInfluxMetricsClient(t)
+	c := newTestMetricsClient(t)
 
 	tim, usage, err := c.QueryLastestNodeCPU("docker-for-desktop")
 
@@ -94,7 +94,7 @@ func TestQueryLastestNodeCPU(t *testing.T) {
 }
 
 func TestQueryNodeMemUsages(t *testing.T) {
-	c := newTestInfluxMetricsClient(t)
+	c := newTestMetricsClient(t)
 
 	usages, err := c.QueryNodeMemUsages("docker-for-desktop", 10)
 
@@ -104,7 +104,7 @@ func TestQueryNodeMemUsages(t *testing.T) {
 }
 
 func TestQueryLastestNodeMem(t *testing.T) {
-	c := newTestInfluxMetricsClient(t)
+	c := newTestMetricsClient(t)
 
 	tim, usage, err := c.QueryLastestNodeMem("docker-for-desktop")
 
@@ -114,7 +114,7 @@ func TestQueryLastestNodeMem(t *testing.T) {
 }
 
 func TestQueryPods(t *testing.T) {
-	c := newTestInfluxMetricsClient(t)
+	c := newTestMetricsClient(t)
 
 	pods, err := c.QueryPods("default")
 
@@ -124,7 +124,7 @@ func TestQueryPods(t *testing.T) {
 }
 
 func TestQueryPodCPUUsages(t *testing.T) {
-	c := newTestInfluxMetricsClient(t)
+	c := newTestMetricsClient(t)
 
 	usages, err := c.QueryPodCPUUsages("default", "mongo-0", 10)
 
@@ -134,7 +134,7 @@ func TestQueryPodCPUUsages(t *testing.T) {
 }
 
 func TestQueryLastestPodCPU(t *testing.T) {
-	c := newTestInfluxMetricsClient(t)
+	c := newTestMetricsClient(t)
 
 	tim, usage, err := c.QueryLastestPodCPU("default", "mongo-0")
 
@@ -144,7 +144,7 @@ func TestQueryLastestPodCPU(t *testing.T) {
 }
 
 func TestQueryPodMemUsages(t *testing.T) {
-	c := newTestInfluxMetricsClient(t)
+	c := newTestMetricsClient(t)
 
 	usages, err := c.QueryPodMemUsages("default", "mongo-0", 10)
 
@@ -153,7 +153,7 @@ func TestQueryPodMemUsages(t *testing.T) {
 }
 
 func TestQueryLastestPodMem(t *testing.T) {
-	c := newTestInfluxMetricsClient(t)
+	c := newTestMetricsClient(t)
 
 	tim, usage, err := c.QueryLastestPodMem("default", "mongo-0")
 
@@ -163,7 +163,7 @@ func TestQueryLastestPodMem(t *testing.T) {
 }
 
 func TestQueryContainers(t *testing.T) {
-	c := newTestInfluxMetricsClient(t)
+	c := newTestMetricsClient(t)
 
 	containers, err := c.QueryContainers("default", "mongo-0")
 
@@ -174,7 +174,7 @@ func TestQueryContainers(t *testing.T) {
 }
 
 func TestQueryContainerCPUUsages(t *testing.T) {
-	c := newTestInfluxMetricsClient(t)
+	c := newTestMetricsClient(t)
 
 	usages, err := c.QueryContainerCPUUsages("default", "mongo-0", "mongo-sidecar", 10)
 
@@ -184,7 +184,7 @@ func TestQueryContainerCPUUsages(t *testing.T) {
 }
 
 func TestQueryLastestContainerCPU(t *testing.T) {
-	c := newTestInfluxMetricsClient(t)
+	c := newTestMetricsClient(t)
 
 	tim, usage, err := c.QueryLastestContainerCPU("default", "mongo-0", "mongo-sidecar")
 
@@ -194,7 +194,7 @@ func TestQueryLastestContainerCPU(t *testing.T) {
 }
 
 func TestQueryContainerMemUsages(t *testing.T) {
-	c := newTestInfluxMetricsClient(t)
+	c := newTestMetricsClient(t)
 
 	usages, err := c.QueryContainerMemUsages("default", "mongo-0", "mongo-sidecar", 10)
 
@@ -204,7 +204,7 @@ func TestQueryContainerMemUsages(t *testing.T) {
 }
 
 func TestQueryLastestContainerMem(t *testing.T) {
-	c := newTestInfluxMetricsClient(t)
+	c := newTestMetricsClient(t)
 
 	tim, usage, err := c.QueryLastestContainerMem("default", "mongo-0", "mongo-sidecar")
 
@@ -214,7 +214,7 @@ func TestQueryLastestContainerMem(t *testing.T) {
 }
 
 func TestClose(t *testing.T) {
-	c := newTestInfluxMetricsClient(t)
+	c := newTestMetricsClient(t)
 
 	err := c.Close()
 	assert.NoError(t, err)

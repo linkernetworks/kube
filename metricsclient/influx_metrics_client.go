@@ -28,8 +28,8 @@ type InfluxMetricsClient struct {
 	db  string
 }
 
-// NewInfluxMetricsClient creates a InfluxMetricsClient
-func NewInfluxMetricsClient(c client.Client) *InfluxMetricsClient {
+// NewForInfluxdb creates a InfluxMetricsClient
+func NewForInfluxdb(c client.Client) *InfluxMetricsClient {
 	return &InfluxMetricsClient{
 		influxc: c,
 		db:      "k8s", // by default
