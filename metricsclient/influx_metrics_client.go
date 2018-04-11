@@ -58,7 +58,11 @@ func (c *InfluxMetricsClient) QueryNamespaces() ([]string, error) {
 		}
 		for _, s := range r.Series {
 			for _, v := range s.Values {
-				namespaces = append(namespaces, v[1].(string))
+				ns, ok := v[1].(string)
+				if !ok {
+					return nil, ErrTypeConvertion
+				}
+				namespaces = append(namespaces, ns)
 			}
 		}
 	}
@@ -79,7 +83,11 @@ func (c *InfluxMetricsClient) QueryNodes() ([]string, error) {
 		}
 		for _, s := range r.Series {
 			for _, v := range s.Values {
-				nodes = append(nodes, v[1].(string))
+				name, ok := v[1].(string)
+				if !ok {
+					return nil, ErrTypeConvertion
+				}
+				nodes = append(nodes, name)
 			}
 		}
 	}
@@ -100,7 +108,11 @@ func (c *InfluxMetricsClient) QueryPods(namespace string) ([]string, error) {
 		}
 		for _, s := range r.Series {
 			for _, v := range s.Values {
-				pods = append(pods, v[1].(string))
+				pod, ok := v[1].(string)
+				if !ok {
+					return nil, ErrTypeConvertion
+				}
+				pods = append(pods, pod)
 			}
 		}
 	}
@@ -209,11 +221,11 @@ func (c *InfluxMetricsClient) QueryContainers(namespace, pod string) ([]string, 
 		}
 		for _, s := range r.Series {
 			for _, v := range s.Values {
-				val, ok := v[1].(string)
+				c, ok := v[1].(string)
 				if !ok {
 					return nil, ErrTypeConvertion
 				}
-				containers = append(containers, val)
+				containers = append(containers, c)
 			}
 		}
 	}
