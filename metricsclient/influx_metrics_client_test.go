@@ -9,12 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const (
-	// The monitoring suite(InfluxDB/Heapster/Grafana) must be deployed to 'kube-system'
-	// See docs/DEPLOYMENT.md
-	influxURL = "http://monitoring-influxdb.kube-system:8086"
-)
-
 func newTestMetricsClient(t *testing.T) *InfluxMetricsClient {
 	t.Helper()
 
@@ -32,7 +26,9 @@ func TestImplementation(t *testing.T) {
 	var _ MetricsClient = c
 }
 
-func TestNewInfluxMetricsClient(t *testing.T) {
+func TestNewForInfluxdb(t *testing.T) {
+	// This is test URL and the constructor won't dial it, no need to be reachable
+	var influxURL = "http://monitoring-influxdb.kube-system:8086"
 	ic, err := client.NewHTTPClient(client.HTTPConfig{
 		Addr: influxURL,
 	})
