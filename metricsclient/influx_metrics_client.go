@@ -51,7 +51,6 @@ func (c *InfluxMetricsClient) QueryNamespaces() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	// PrintPretty(results)
 	var namespaces []string
 	for _, r := range results {
 		if r.Err != "" {
@@ -73,7 +72,6 @@ func (c *InfluxMetricsClient) QueryNodes() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	// PrintPretty(results)
 	var nodes []string
 	for _, r := range results {
 		if r.Err != "" {
@@ -95,7 +93,6 @@ func (c *InfluxMetricsClient) QueryPods(namespace string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	// PrintPretty(results)
 	var pods []string
 	for _, r := range results {
 		if r.Err != "" {
@@ -117,7 +114,6 @@ func (c *InfluxMetricsClient) QueryPodCPUUsages(namespace, pod string, limit int
 	if err != nil {
 		return nil, err
 	}
-	// PrintPretty(results)
 	return parseCPUUsages(results)
 }
 
@@ -140,7 +136,6 @@ func (c *InfluxMetricsClient) QueryPodMemUsages(namespace, pod string, limit int
 	if err != nil {
 		return nil, err
 	}
-	// PrintPretty(results)
 	return parseMemUsages(results)
 }
 
@@ -163,7 +158,6 @@ func (c *InfluxMetricsClient) QueryNodeCPUUsages(node string, limit int) ([]type
 	if err != nil {
 		return nil, err
 	}
-	// PrintPretty(results)
 	return parseCPUUsages(results)
 }
 
@@ -186,7 +180,6 @@ func (c *InfluxMetricsClient) QueryNodeMemUsages(node string, limit int) ([]type
 	if err != nil {
 		return nil, err
 	}
-	// PrintPretty(results)
 	return parseMemUsages(results)
 }
 
@@ -209,7 +202,6 @@ func (c *InfluxMetricsClient) QueryContainers(namespace, pod string) ([]string, 
 	if err != nil {
 		return nil, err
 	}
-	// PrintPretty(results)
 	var containers []string
 	for _, r := range results {
 		if r.Err != "" {
@@ -235,7 +227,6 @@ func (c *InfluxMetricsClient) QueryContainerCPUUsages(namespace, pod, container 
 	if err != nil {
 		return nil, err
 	}
-	// PrintPretty(results)
 	var usages []types.CPUUsage
 	for _, r := range results {
 		if r.Err != "" {
@@ -277,7 +268,6 @@ func (c *InfluxMetricsClient) QueryContainerMemUsages(namespace, pod, container 
 	if err != nil {
 		return nil, err
 	}
-	// PrintPretty(results)
 	var usages []types.MemUsage
 	for _, r := range results {
 		if r.Err != "" {
