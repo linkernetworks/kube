@@ -59,12 +59,12 @@ func (s *JobLogSubscription) Start() error {
 	clientset := kdt.GetClientset()
 
 	// magic function to get pod name from a job
-	pod, err := GetPodByJobName(clientset, s.Target, s.JobName)
+	pods, err := GetPodsByJobName(clientset, s.Target, s.JobName)
 	if err != nil {
 		return err
 	}
 
-	s.PodName = pod.GetName()
+	s.PodName = pods[0].GetName()
 
 	// the pod id of the job
 	deployment := dtypes.Deployment{ID: s.PodName}
@@ -79,6 +79,6 @@ func (s *JobLogSubscription) Start() error {
 	s.watcher = watcher
 	s.running = true
 
-	go s.startStream()
+	go s.startStream(s.Topic())
 	return nil
 }

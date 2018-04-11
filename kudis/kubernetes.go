@@ -3,13 +3,14 @@ package kudis
 import (
 	"fmt"
 
-	coreV1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
-func GetPodByJobName(clientset *kubernetes.Clientset, namespace, jobName string) (*coreV1.Pod, error) {
+func GetPodsByJobName(clientset *kubernetes.Clientset, namespace, jobName string) ([]v1.Pod, error) {
 	label := "job-name=" + jobName
+
 	opts := metaV1.ListOptions{
 		LabelSelector: label,
 	}
@@ -21,6 +22,6 @@ func GetPodByJobName(clientset *kubernetes.Clientset, namespace, jobName string)
 	if len(list.Items) == 0 {
 		return nil, fmt.Errorf("could not find job for pod in namespace %s with label: %v", namespace, label)
 	}
-	// since we might get many pods but we always return the latest one
-	return &list.Items[0], nil
+
+	return list.Items, nil
 }

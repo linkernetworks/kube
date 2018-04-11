@@ -87,12 +87,11 @@ func (s *PodLogSubscription) Start() error {
 	s.watcher = watcher
 	s.running = true
 
-	go s.startStream()
+	go s.startStream(s.Topic())
 	return nil
 }
 
-func (s *PodLogSubscription) startStream() {
-	var topic = s.Topic()
+func (s *PodLogSubscription) startStream(topic string) {
 STREAM:
 	for {
 		select {
