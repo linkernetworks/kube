@@ -7,7 +7,9 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-func NewVolume(def *container.Volume) v1.Volume {
+// NewClaimBased creates the kubernetes volume object from the container volume
+// definition.
+func NewClaimBased(def *container.Volume) v1.Volume {
 	return v1.Volume{
 		Name: def.VolumeMount.Name,
 		VolumeSource: v1.VolumeSource{
@@ -19,11 +21,11 @@ func NewVolume(def *container.Volume) v1.Volume {
 	}
 }
 
-// NewVolumes creates the kubernetes volume definition from the container
+// NewVolumesFromDef creates the kubernetes volume definition from the container
 // volume def used by the pod spec.
-func NewVolumes(defs []container.Volume) (volumes []v1.Volume) {
+func NewVolumesFromDef(defs []container.Volume) (volumes []v1.Volume) {
 	for _, def := range defs {
-		volumes = append(volumes, NewVolume(&def))
+		volumes = append(volumes, NewClaimBased(&def))
 	}
 
 	return volumes
@@ -31,7 +33,7 @@ func NewVolumes(defs []container.Volume) (volumes []v1.Volume) {
 
 // NewVolumeMounts creates the kubernetes volume mount definition from the
 // container volume def, it uses the defined volumes
-func NewVolumeMount(def *container.Volume) v1.VolumeMount {
+func NewVolumeMountFromDef(def *container.Volume) v1.VolumeMount {
 	return v1.VolumeMount{
 		Name:      def.VolumeMount.Name,
 		SubPath:   def.VolumeMount.SubPath,
@@ -39,42 +41,42 @@ func NewVolumeMount(def *container.Volume) v1.VolumeMount {
 	}
 }
 
-// NewVolumeMounts creates the kubernetes volume mount definition from the
+// NewVolumeMountsFromDef creates the kubernetes volume mount definition from the
 // container volume def, it uses the defined volumes
-func NewVolumeMounts(defs []container.Volume) (mounts []v1.VolumeMount) {
+func NewVolumeMountsFromDef(defs []container.Volume) (mounts []v1.VolumeMount) {
 	for _, def := range defs {
-		mounts = append(mounts, NewVolumeMount(&def))
+		mounts = append(mounts, NewVolumeMountFromDef(&def))
 	}
 
 	return mounts
 }
 
 func AttachVolumesToPod(defs []container.Volume, pod *v1.Pod) {
-	pod.Spec.Volumes = append(pod.Spec.Volumes, NewVolumes(defs)...)
+	pod.Spec.Volumes = append(pod.Spec.Volumes, NewVolumesFromDef(defs)...)
 	for idx, container := range pod.Spec.Containers {
-		pod.Spec.Containers[idx].VolumeMounts = append(container.VolumeMounts, NewVolumeMounts(defs)...)
+		pod.Spec.Containers[idx].VolumeMounts = append(container.VolumeMounts, NewVolumeMountsFromDef(defs)...)
 	}
 }
 
 func AttachVolumeToPod(def *container.Volume, pod *v1.Pod) {
-	pod.Spec.Volumes = append(pod.Spec.Volumes, NewVolume(def))
+	pod.Spec.Volumes = append(pod.Spec.Volumes, NewClaimBased(def))
 	for idx, container := range pod.Spec.Containers {
-		pod.Spec.Containers[idx].VolumeMounts = append(container.VolumeMounts, NewVolumeMount(def))
+		pod.Spec.Containers[idx].VolumeMounts = append(container.VolumeMounts, NewVolumeMountFromDef(def))
 	}
 }
 
 func AttachVolumesToJob(defs []container.Volume, job *batchv1.Job) {
 	podSpec := &job.Spec.Template.Spec
-	podSpec.Volumes = append(podSpec.Volumes, NewVolumes(defs)...)
+	podSpec.Volumes = append(podSpec.Volumes, NewVolumesFromDef(defs)...)
 	for idx, container := range podSpec.Containers {
-		podSpec.Containers[idx].VolumeMounts = append(container.VolumeMounts, NewVolumeMounts(defs)...)
+		podSpec.Containers[idx].VolumeMounts = append(container.VolumeMounts, NewVolumeMountsFromDef(defs)...)
 	}
 }
 
 func AttachVolumeToJob(def *container.Volume, job *batchv1.Job) {
 	podSpec := &job.Spec.Template.Spec
-	podSpec.Volumes = append(podSpec.Volumes, NewVolume(def))
+	podSpec.Volumes = append(podSpec.Volumes, NewClaimBased(def))
 	for idx, container := range podSpec.Containers {
-		podSpec.Containers[idx].VolumeMounts = append(container.VolumeMounts, NewVolumeMount(def))
+		podSpec.Containers[idx].VolumeMounts = append(container.VolumeMounts, NewVolumeMountFromDef(def))
 	}
 }
