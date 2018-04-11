@@ -130,7 +130,6 @@ func Rewrite(clientset *kubernetes.Clientset, cf config.Config) (config.Config, 
 	}
 
 	logger.Infof("Found node address: %v", address)
-	logger.Debugf("Found node: %+v", node)
 
 	mongo, err := clientset.Core().Services("default").Get("mongo-external", metav1.GetOptions{})
 	if err != nil {
