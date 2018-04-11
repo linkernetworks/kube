@@ -93,20 +93,20 @@ func TestQueryLastestNodeCPU(t *testing.T) {
 	assert.True(t, usage > 0)
 }
 
-func TestQueryNodeMemUsages(t *testing.T) {
+func TestQueryNodeMemoryUsages(t *testing.T) {
 	c := newTestMetricsClient(t)
 
-	usages, err := c.QueryNodeMemUsages("docker-for-desktop", 10)
+	usages, err := c.QueryNodeMemoryUsages("docker-for-desktop", 10)
 
 	assert.NoError(t, err)
 	assert.NotEmpty(t, usages)
 	assert.Len(t, usages, 10)
 }
 
-func TestQueryLastestNodeMem(t *testing.T) {
+func TestQueryLastestNodeMemory(t *testing.T) {
 	c := newTestMetricsClient(t)
 
-	tim, usage, err := c.QueryLastestNodeMem("docker-for-desktop")
+	tim, usage, err := c.QueryLastestNodeMemory("docker-for-desktop")
 
 	assert.NoError(t, err)
 	assert.NotNil(t, tim)
@@ -143,19 +143,19 @@ func TestQueryLastestPodCPU(t *testing.T) {
 	assert.True(t, usage > 0)
 }
 
-func TestQueryPodMemUsages(t *testing.T) {
+func TestQueryPodMemoryUsages(t *testing.T) {
 	c := newTestMetricsClient(t)
 
-	usages, err := c.QueryPodMemUsages("default", "mongo-0", 10)
+	usages, err := c.QueryPodMemoryUsages("default", "mongo-0", 10)
 
 	assert.NoError(t, err)
 	assert.Len(t, usages, 10)
 }
 
-func TestQueryLastestPodMem(t *testing.T) {
+func TestQueryLastestPodMemory(t *testing.T) {
 	c := newTestMetricsClient(t)
 
-	tim, usage, err := c.QueryLastestPodMem("default", "mongo-0")
+	tim, usage, err := c.QueryLastestPodMemory("default", "mongo-0")
 
 	assert.NoError(t, err)
 	assert.NotNil(t, tim)
@@ -193,20 +193,20 @@ func TestQueryLastestContainerCPU(t *testing.T) {
 	assert.True(t, usage > 0)
 }
 
-func TestQueryContainerMemUsages(t *testing.T) {
+func TestQueryContainerMemoryUsages(t *testing.T) {
 	c := newTestMetricsClient(t)
 
-	usages, err := c.QueryContainerMemUsages("default", "mongo-0", "mongo-sidecar", 10)
+	usages, err := c.QueryContainerMemoryUsages("default", "mongo-0", "mongo-sidecar", 10)
 
 	assert.NoError(t, err)
 	assert.NotEmpty(t, usages)
 	assert.Len(t, usages, 10)
 }
 
-func TestQueryLastestContainerMem(t *testing.T) {
+func TestQueryLastestContainerMemory(t *testing.T) {
 	c := newTestMetricsClient(t)
 
-	tim, usage, err := c.QueryLastestContainerMem("default", "mongo-0", "mongo-sidecar")
+	tim, usage, err := c.QueryLastestContainerMemory("default", "mongo-0", "mongo-sidecar")
 
 	assert.NoError(t, err)
 	assert.NotNil(t, tim)

@@ -10,9 +10,9 @@ import (
 	client "github.com/influxdata/influxdb/client/v2"
 )
 
-// parseMemUsages parses timestamps and CPU usages from raw SQL results
-func parseMemUsages(results []client.Result) ([]types.MemUsage, error) {
-	var memUsages []types.MemUsage
+// parseMemoryUsages parses timestamps and CPU usages from raw SQL results
+func parseMemoryUsages(results []client.Result) ([]types.MemoryUsage, error) {
+	var memUsages []types.MemoryUsage
 	for _, r := range results {
 		if r.Err != "" {
 			return nil, errors.New(r.Err)
@@ -27,7 +27,7 @@ func parseMemUsages(results []client.Result) ([]types.MemUsage, error) {
 				if err != nil {
 					return nil, err
 				}
-				memUsages = append(memUsages, types.MemUsage{Timestamp: t, Usage: val})
+				memUsages = append(memUsages, types.MemoryUsage{Timestamp: t, Usage: val})
 			}
 		}
 	}

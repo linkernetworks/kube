@@ -46,7 +46,7 @@ func TestParseCPUUsages(t *testing.T) {
 	assert.Len(t, results[0].Series[0].Values, 3)
 }
 
-func TestParseMemUsages(t *testing.T) {
+func TestParseMemoryUsages(t *testing.T) {
 	rawText := []byte(`
 	[
 	  {
@@ -81,7 +81,7 @@ func TestParseMemUsages(t *testing.T) {
 	err := json.Unmarshal(rawText, &results)
 	assert.NoError(t, err)
 
-	usages, err := parseMemUsages(results)
+	usages, err := parseMemoryUsages(results)
 
 	assert.NoError(t, err)
 	assert.Len(t, usages, 3)

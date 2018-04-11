@@ -14,8 +14,8 @@ import (
 // InfluxMetricsClient is a client which queries metrics of K8s Node/Pod/Container resource usage
 // like CPU, memory, filesystem usage and network I/O from InfluxDB.
 //
-// When you use the batch methods (NodeCPUUsages, NodeMemUsages, PodCPUUsages,
-// PodMemUsages, ContainerCPUUsages and ContainerMemUsages), remember the Heapster
+// When you use the batch methods (NodeCPUUsages, NodeMemoryUsages, PodCPUUsages,
+// PodMemoryUsages, ContainerCPUUsages and ContainerMemoryUsages), remember the Heapster
 // takes samples (采样) every 1min in current configuration, so for example if you
 // call PodCPUUsages() and pass n=10 in the argument, you are asking the client
 // 'I want the CPU usages of a Pod in the last ten minutes'. The results will
@@ -129,19 +129,19 @@ func (c *InfluxMetricsClient) QueryLastestPodCPU(namespace, pod string) (*time.T
 	return &usages[0].Timestamp, usages[0].Usage, nil
 }
 
-// QueryPodMemUsages searches the InfluxDB and returns a batch of last memory usage records of a Pod
-func (c *InfluxMetricsClient) QueryPodMemUsages(namespace, pod string, limit int) ([]types.MemUsage, error) {
+// QueryPodMemoryUsages searches the InfluxDB and returns a batch of last memory usage records of a Pod
+func (c *InfluxMetricsClient) QueryPodMemoryUsages(namespace, pod string, limit int) ([]types.MemoryUsage, error) {
 	sql := fmt.Sprintf("SELECT value FROM \"memory/usage\" WHERE \"cluster_name\" = '%s' AND \"type\" = 'pod' AND \"pod_name\" = '%s' ORDER BY DESC LIMIT %d", namespace, pod, limit)
 	results, err := rawQuery(c.influxc, c.db, sql)
 	if err != nil {
 		return nil, err
 	}
-	return parseMemUsages(results)
+	return parseMemoryUsages(results)
 }
 
-// QueryLastestPodMem searches the InfluxDB and returns the last record of memory usage (in Bytes) of a Pod
-func (c *InfluxMetricsClient) QueryLastestPodMem(namespace, pod string) (*time.Time, float64, error) {
-	usages, err := c.QueryPodMemUsages(namespace, pod, 1)
+// QueryLastestPodMemory searches the InfluxDB and returns the last record of memory usage (in Bytes) of a Pod
+func (c *InfluxMetricsClient) QueryLastestPodMemory(namespace, pod string) (*time.Time, float64, error) {
+	usages, err := c.QueryPodMemoryUsages(namespace, pod, 1)
 	if err != nil {
 		return nil, 0.0, err
 	}
@@ -173,19 +173,19 @@ func (c *InfluxMetricsClient) QueryLastestNodeCPU(node string) (*time.Time, floa
 	return &usages[0].Timestamp, usages[0].Usage, nil
 }
 
-// QueryNodeMemUsages searches the InfluxDB and returns a batch of last memory usage records of a Node
-func (c *InfluxMetricsClient) QueryNodeMemUsages(node string, limit int) ([]types.MemUsage, error) {
+// QueryNodeMemoryUsages searches the InfluxDB and returns a batch of last memory usage records of a Node
+func (c *InfluxMetricsClient) QueryNodeMemoryUsages(node string, limit int) ([]types.MemoryUsage, error) {
 	sql := fmt.Sprintf("SELECT value FROM \"memory/usage\" WHERE \"type\" = 'node' AND \"nodename\" = '%s' ORDER BY DESC LIMIT %d", node, limit)
 	results, err := rawQuery(c.influxc, c.db, sql)
 	if err != nil {
 		return nil, err
 	}
-	return parseMemUsages(results)
+	return parseMemoryUsages(results)
 }
 
-// QueryLastestNodeMem searches the InfluxDB and returns the last record of memory usage (in Bytes) of a Node
-func (c *InfluxMetricsClient) QueryLastestNodeMem(node string) (*time.Time, float64, error) {
-	usages, err := c.QueryNodeMemUsages(node, 1)
+// QueryLastestNodeMemory searches the InfluxDB and returns the last record of memory usage (in Bytes) of a Node
+func (c *InfluxMetricsClient) QueryLastestNodeMemory(node string) (*time.Time, float64, error) {
+	usages, err := c.QueryNodeMemoryUsages(node, 1)
 	if err != nil {
 		return nil, 0.0, err
 	}
@@ -261,14 +261,14 @@ func (c *InfluxMetricsClient) QueryLastestContainerCPU(namespace, pod, container
 	return &usages[0].Timestamp, usages[0].Usage, nil
 }
 
-// QueryContainerMemUsages searches the InfluxDB and returns a batch of last memory usage records of a Container
-func (c *InfluxMetricsClient) QueryContainerMemUsages(namespace, pod, container string, limit int) ([]types.MemUsage, error) {
+// QueryContainerMemoryUsages searches the InfluxDB and returns a batch of last memory usage records of a Container
+func (c *InfluxMetricsClient) QueryContainerMemoryUsages(namespace, pod, container string, limit int) ([]types.MemoryUsage, error) {
 	sql := fmt.Sprintf("SELECT value FROM \"memory/usage\" WHERE \"cluster_name\" = '%s' AND \"pod_name\" = '%s' AND \"container_name\" = '%s' AND \"type\" = 'pod_container' ORDER BY DESC LIMIT %d", namespace, pod, container, limit)
 	results, err := rawQuery(c.influxc, c.db, sql)
 	if err != nil {
 		return nil, err
 	}
-	var usages []types.MemUsage
+	var usages []types.MemoryUsage
 	for _, r := range results {
 		if r.Err != "" {
 			return nil, errors.New(r.Err)
@@ -283,16 +283,16 @@ func (c *InfluxMetricsClient) QueryContainerMemUsages(namespace, pod, container 
 				if err != nil {
 					return nil, err
 				}
-				usages = append(usages, types.MemUsage{Timestamp: t, Usage: val})
+				usages = append(usages, types.MemoryUsage{Timestamp: t, Usage: val})
 			}
 		}
 	}
 	return usages, nil
 }
 
-// QueryLastestContainerMem searches the InfluxDB and returns the last record of memory usage (in Bytes) of a Container
-func (c *InfluxMetricsClient) QueryLastestContainerMem(namespace, pod, container string) (*time.Time, float64, error) {
-	usages, err := c.QueryContainerMemUsages(namespace, pod, container, 1)
+// QueryLastestContainerMemory searches the InfluxDB and returns the last record of memory usage (in Bytes) of a Container
+func (c *InfluxMetricsClient) QueryLastestContainerMemory(namespace, pod, container string) (*time.Time, float64, error) {
+	usages, err := c.QueryContainerMemoryUsages(namespace, pod, container, 1)
 	if err != nil {
 		return nil, 0.0, err
 	}
