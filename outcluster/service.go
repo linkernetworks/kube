@@ -31,6 +31,7 @@ func MustParseLocalRewrite(str string) (settings RewriteSettings) {
 			settings.RewriteJobServer = false
 		case "jobupdater":
 			settings.RewriteJobUpdater = false
+		case "":
 		default:
 			panic(fmt.Errorf("key %s is not supported.", key))
 		}
