@@ -27,9 +27,9 @@ func AllocateJobServerExternalService(clientset *kubernetes.Clientset, name stri
 
 func NewJobServerExternalService(name string) *v1.Service {
 	return NewNodePortService(name, NodePortServiceParams{
-		Labels: map[string]string{"environment": "testing"},
+		Labels: map[string]string{"app": "jobserver"},
 		Selector: map[string]string{
-			"service": "jobserver",
+			"app": "jobserver",
 		},
 		PortName:   "jobserver",
 		TargetPort: 50051,
