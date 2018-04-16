@@ -4,14 +4,11 @@ import (
 	"fmt"
 	"strconv"
 
-	"k8s.io/apimachinery/pkg/api/errors"
-
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"bitbucket.org/linkernetworks/aurora/src/config"
@@ -41,49 +38,10 @@ func AllocateNodePortServices(clientset *kubernetes.Clientset, cf config.Config)
 	if err := AllocateInfluxdbExternalService(clientset, "influxdb-external"); err != nil {
 		return err
 	}
+	if err := AllocateJobServerExternalService(clientset, "jobserver-external"); err != nil {
+		return err
+	}
 	return nil
-}
-
-func AllocateRedisExternalService(clientset *kubernetes.Clientset, name string) error {
-	logger.Infof("Checking %s service...", name)
-	_, err := clientset.Core().Services("default").Get(name, metav1.GetOptions{})
-
-	logger.Infof("Creating service: %s", name)
-	if errors.IsNotFound(err) {
-		s := NewRedisExternalService(name)
-		_, err = clientset.Core().Services("default").Create(s)
-		return err
-	}
-	return err
-}
-
-func AllocateInfluxdbExternalService(clientset *kubernetes.Clientset, name string) error {
-	logger.Infof("Checking %s service...", name)
-	_, err := clientset.Core().Services("default").Get(name, metav1.GetOptions{})
-	if errors.IsNotFound(err) {
-		logger.Infof("Creating service: %s", name)
-		s := NewInfluxdbExternalService(name)
-		_, err = clientset.Core().Services("default").Create(s)
-		return err
-	}
-	return err
-}
-
-func AllocateMongoExternalService(clientset *kubernetes.Clientset, name string) error {
-	logger.Infof("Labeling podindex on mongo-0 pod for %s", name)
-	if _, err := clientset.Core().Pods("default").Patch("mongo-0", types.JSONPatchType, []byte(`[ { "op": "add", "path": "/metadata/labels/podindex", "value": "0" } ]`)); err != nil {
-		return err
-	}
-
-	logger.Infof("Checking %s service...", name)
-	_, err := clientset.Core().Services("default").Get(name, metav1.GetOptions{})
-	if errors.IsNotFound(err) {
-		logger.Infof("Creating service: %s", name)
-		s := NewMongoExternalService(name)
-		_, err = clientset.Core().Services("default").Create(s)
-		return err
-	}
-	return err
 }
 
 // ConnectWith creates the external services and rewrite the config
@@ -161,6 +119,18 @@ func Rewrite(clientset *kubernetes.Clientset, cf config.Config) (config.Config, 
 		logger.Infof("Rewrited influxdb address to %s", dst.Influxdb.Url)
 		break
 	}
+
+	jobserver, err := clientset.Core().Services("default").Get("jobserver-external", metav1.GetOptions{})
+	if err != nil {
+		return dst, err
+	}
+	for _, port := range jobserver.Spec.Ports {
+		dst.JobController.Host = address // + ":" + strconv.Itoa(int(port.NodePort))
+		dst.JobController.Port = port.NodePort
+		logger.Infof("Rewrited jobserver address to %s", dst.JobController.Addr())
+		break
+	}
+
 	return dst, nil
 }
 
@@ -174,20 +144,6 @@ func NewInfluxdbExternalService(name string) *v1.Service {
 		TargetPort: 8086,
 		NodePort:   32086,
 	})
-}
-
-func NewRedisExternalService(name string) *v1.Service {
-	return NewNodePortService(name, NodePortServiceParams{
-		Labels: map[string]string{"environment": "testing"},
-		Selector: map[string]string{
-			// TODO: use role for consistency
-			"service": "redis",
-		},
-		PortName:   "redis",
-		TargetPort: 6379,
-		NodePort:   32199,
-	})
-
 }
 
 func NewMongoExternalService(name string) *v1.Service {
