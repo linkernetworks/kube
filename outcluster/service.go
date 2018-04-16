@@ -3,6 +3,7 @@ package outcluster
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -15,6 +16,27 @@ import (
 	"bitbucket.org/linkernetworks/aurora/src/logger"
 	k8ssvc "bitbucket.org/linkernetworks/aurora/src/service/kubernetes"
 )
+
+type RewriteSettings struct {
+	RewriteJobServer  bool
+	RewriteJobUpdater bool
+}
+
+func MustParseLocalRewrite(str string) (settings RewriteSettings) {
+	settings.RewriteJobServer = true
+	settings.RewriteJobUpdater = true
+	for _, key := range strings.Split(str, ",") {
+		switch key {
+		case "jobserver":
+			settings.RewriteJobServer = false
+		case "jobupdater":
+			settings.RewriteJobUpdater = false
+		default:
+			panic(fmt.Errorf("key %s is not supported.", key))
+		}
+	}
+	return settings
+}
 
 func DeleteNodePortServices(clientset *kubernetes.Clientset) error {
 	logger.Info("Deleting mongo-external service")
@@ -45,17 +67,17 @@ func AllocateNodePortServices(clientset *kubernetes.Clientset, cf config.Config)
 }
 
 // ConnectWith creates the external services and rewrite the config
-func ConnectWith(clientset *kubernetes.Clientset, cf config.Config) (config.Config, error) {
+func ConnectWith(clientset *kubernetes.Clientset, cf config.Config, settings RewriteSettings) (config.Config, error) {
 	var dst = cf
 
 	if err := AllocateNodePortServices(clientset, cf); err != nil {
 		return dst, err
 	}
 
-	return Rewrite(clientset, dst)
+	return Rewrite(clientset, dst, settings)
 }
 
-func ConnectAndRewrite(cf config.Config) (config.Config, error) {
+func ConnectAndRewrite(cf config.Config, settings RewriteSettings) (config.Config, error) {
 	if cf.Kubernetes == nil {
 		return cf, fmt.Errorf("kubernetes config is not defined, can't convert config to load kubernetes service")
 	}
@@ -65,10 +87,10 @@ func ConnectAndRewrite(cf config.Config) (config.Config, error) {
 	if err != nil {
 		return cf, err
 	}
-	return ConnectWith(clientset, cf)
+	return ConnectWith(clientset, cf, settings)
 }
 
-func Rewrite(clientset *kubernetes.Clientset, cf config.Config) (config.Config, error) {
+func Rewrite(clientset *kubernetes.Clientset, cf config.Config, settings RewriteSettings) (config.Config, error) {
 	var dst = cf
 	var err error
 
@@ -120,15 +142,17 @@ func Rewrite(clientset *kubernetes.Clientset, cf config.Config) (config.Config, 
 		break
 	}
 
-	jobserver, err := clientset.Core().Services("default").Get("jobserver-external", metav1.GetOptions{})
-	if err != nil {
-		return dst, err
-	}
-	for _, port := range jobserver.Spec.Ports {
-		dst.JobController.Host = address // + ":" + strconv.Itoa(int(port.NodePort))
-		dst.JobController.Port = port.NodePort
-		logger.Infof("Rewrited jobserver address to %s", dst.JobController.Addr())
-		break
+	if settings.RewriteJobServer {
+		jobserver, err := clientset.Core().Services("default").Get("jobserver-external", metav1.GetOptions{})
+		if err != nil {
+			return dst, err
+		}
+		for _, port := range jobserver.Spec.Ports {
+			dst.JobController.Host = address // + ":" + strconv.Itoa(int(port.NodePort))
+			dst.JobController.Port = port.NodePort
+			logger.Infof("Rewrited jobserver address to %s", dst.JobController.Addr())
+			break
+		}
 	}
 
 	return dst, nil

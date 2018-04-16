@@ -26,7 +26,7 @@ func TestConnectWith(t *testing.T) {
 
 	// DeleteNodePortServices(clientset)
 
-	newcf, err := ConnectWith(clientset, cf)
+	newcf, err := ConnectWith(clientset, cf, RewriteSettings{})
 	assert.NoError(t, err)
 
 	m := mongo.New(newcf.Mongo.Url)
