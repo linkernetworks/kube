@@ -70,7 +70,7 @@ func (s *JobLogSubscription) Start() error {
 	deployment := dtypes.Deployment{ID: s.PodName}
 
 	// listen the container logs from the log channel
-	watcher, err := s.DeploymentTarget.GetContainerLogStream(&deployment, s.ContainerName, s.tailLines)
+	watcher, err := s.DeploymentTarget.GetDeploymentLogStream(&deployment, s.ContainerName, s.tailLines)
 	if err != nil {
 		return err
 	}
