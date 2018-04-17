@@ -20,17 +20,21 @@ import (
 type RewriteSettings struct {
 	RewriteJobServer  bool
 	RewriteJobUpdater bool
+	RewriteKudis      bool
 }
 
 func MustParseLocalRewrite(str string) (settings RewriteSettings) {
 	settings.RewriteJobServer = true
 	settings.RewriteJobUpdater = true
+	settings.RewriteKudis = true
 	for _, key := range strings.Split(str, ",") {
 		switch key {
 		case "jobserver":
 			settings.RewriteJobServer = false
 		case "jobupdater":
 			settings.RewriteJobUpdater = false
+		case "kudis":
+			settings.RewriteKudis = false
 		case "":
 		default:
 			panic(fmt.Errorf("key %s is not supported.", key))
@@ -48,6 +52,9 @@ func DeleteNodePortServices(clientset *kubernetes.Clientset) error {
 
 	logger.Info("Deleting redis-external service")
 	clientset.Core().Services("default").Delete("influxdb-external", nil)
+
+	logger.Info("Deleting jobserver service")
+	clientset.Core().Services("default").Delete("jobserver-external", nil)
 	return nil
 }
 
@@ -62,6 +69,9 @@ func AllocateNodePortServices(clientset *kubernetes.Clientset, cf config.Config)
 		return err
 	}
 	if err := AllocateJobServerExternalService(clientset, "jobserver-external"); err != nil {
+		return err
+	}
+	if err := AllocateKudisExternalService(clientset, "kudis-external"); err != nil {
 		return err
 	}
 	return nil
@@ -149,9 +159,22 @@ func Rewrite(clientset *kubernetes.Clientset, cf config.Config, settings Rewrite
 			return dst, err
 		}
 		for _, port := range jobserver.Spec.Ports {
-			dst.JobController.Host = address // + ":" + strconv.Itoa(int(port.NodePort))
+			dst.JobController.Host = address
 			dst.JobController.Port = port.NodePort
 			logger.Infof("Rewrited jobserver address to %s", dst.JobController.Addr())
+			break
+		}
+	}
+
+	if settings.RewriteKudis {
+		svc, err := clientset.Core().Services("default").Get("kudis-external", metav1.GetOptions{})
+		if err != nil {
+			return dst, err
+		}
+		for _, port := range svc.Spec.Ports {
+			dst.Kudis.Host = address
+			dst.Kudis.Port = port.NodePort
+			logger.Infof("Rewrited kudis address to %s", dst.Kudis.Addr())
 			break
 		}
 	}
