@@ -55,10 +55,10 @@ func TestTrackUntilCompletion(t *testing.T) {
 
 	created, err := clientset.BatchV1().Jobs("testing").Create(&job)
 	assert.NoError(t, err)
-	t.Logf("job created: job=%s", created.Name)
+	t.Logf("job created: job=%s", created.ObjectMeta.Name)
 	defer clientset.BatchV1().Jobs("testing").Delete(created.Name, nil)
 
-	in := tracker.TrackUntilCompletion("testing", fields.ParseSelectorOrDie("metadata.name="+created.Name))
+	in := tracker.TrackUntilCompletion("testing", fields.ParseSelectorOrDie("metadata.name="+created.ObjectMeta.Name))
 	for message := range in {
 		t.Logf("message: phase=%+v", message.Phase)
 	}
