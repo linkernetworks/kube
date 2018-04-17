@@ -44,7 +44,10 @@ func (t *JobStatusTracker) TrackUntilCompletion(namespace string, selector field
 
 		completions := *job.Spec.Completions
 
-		if job.Status.Succeeded == completions {
+		if job.Status.Succeeded == 0 && job.Status.Active == 0 && job.Status.Failed == 0 {
+			o <- JobStatusMessage{Phase: "Pending", Job: job}
+			return false
+		} else if job.Status.Succeeded == completions {
 			o <- JobStatusMessage{Phase: "Completed", Job: job}
 			return true
 		} else if job.Status.Failed > 0 {
@@ -64,8 +67,9 @@ func (t *JobStatusTracker) TrackUntilCompletion(namespace string, selector field
 				}
 			}
 
-			logger.Errorf("unsupported job status: job=%+v", job)
-			return true
+			logger.Errorf("unexpected job status: job: %+v", job)
+			o <- JobStatusMessage{Phase: "Pending", Job: job}
+			return false
 		}
 
 		return false
