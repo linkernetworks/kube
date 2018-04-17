@@ -69,7 +69,7 @@ func (t *JobStatusTracker) TrackUntilCompletion(namespace string, selector field
 
 			logger.Errorf("unexpected job status: job: %+v", job)
 			o <- JobStatusMessage{Phase: "Pending", Job: job}
-			return false
+			return true
 		}
 
 		return false
