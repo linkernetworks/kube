@@ -17,10 +17,14 @@ import (
 
 type Server struct {
 	Redis             *redis.Service
-	deploymentTargets deployment.DeploymentTargetMap
-	running           bool
-	grpcServer        *grpc.Server
-	listener          net.Listener
+	DeploymentTargets deployment.DeploymentTargetMap
+
+	// enable debug mode?
+	Debug bool
+
+	running    bool
+	grpcServer *grpc.Server
+	listener   net.Listener
 
 	subscriptions sync.Map
 	frames        sync.Map
@@ -30,13 +34,13 @@ type Server struct {
 func NewServer(rds *redis.Service, dts deployment.DeploymentTargetMap) *Server {
 	return &Server{
 		Redis:             rds,
-		deploymentTargets: dts,
+		DeploymentTargets: dts,
 	}
 }
 
 func (k *Server) GetDeploymentTarget(target string) (dt deployment.DeploymentTarget, err error) {
 	var ok bool = false
-	dt, ok = k.deploymentTargets[target]
+	dt, ok = k.DeploymentTargets[target]
 	if !ok {
 		return nil, fmt.Errorf("deployment target '%s' is not defined.", dt)
 	}
