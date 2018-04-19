@@ -16,7 +16,7 @@ import (
 )
 
 type Server struct {
-	redisService      *redis.Service
+	Redis             *redis.Service
 	deploymentTargets deployment.DeploymentTargetMap
 	running           bool
 	grpcServer        *grpc.Server
@@ -29,7 +29,7 @@ type Server struct {
 // NewServer Kudis server
 func NewServer(rds *redis.Service, dts deployment.DeploymentTargetMap) *Server {
 	return &Server{
-		redisService:      rds,
+		Redis:             rds,
 		deploymentTargets: dts,
 	}
 }
@@ -52,7 +52,7 @@ func (k *Server) SubscribePodEvent(ctx context.Context, req *pb.PodEventSubscrip
 			Reason:  err.Error(),
 		}, err
 	}
-	var subscription Subscription = NewPodEventSubscription(k.redisService, target, dt, req.GetPodName())
+	var subscription Subscription = NewPodEventSubscription(k.Redis, target, dt, req.GetPodName())
 	success, reason, err := k.Subscribe(subscription)
 	return &pb.SubscriptionResponse{Success: success, Reason: reason}, err
 
@@ -69,7 +69,7 @@ func (k *Server) SubscribePodLogs(ctx context.Context, req *pb.PodLogSubscriptio
 	}
 
 	var subscription Subscription = NewPodLogSubscription(
-		k.redisService, target, dt,
+		k.Redis, target, dt,
 		req.GetPodName(),
 		req.GetContainerName(),
 		req.GetTailLines(),
@@ -90,7 +90,7 @@ func (k *Server) SubscribeJobLogs(ctx context.Context, req *pb.JobLogSubscriptio
 	}
 
 	var subscription Subscription = NewJobLogSubscription(
-		k.redisService, target, dt,
+		k.Redis, target, dt,
 		req.GetJobName(),
 		req.GetContainerName(),
 		req.GetTailLines(),
@@ -136,7 +136,7 @@ func (k *Server) StartSubscription(subscription Subscription) error {
 func (k *Server) QueryNumSubscribers(s Subscription) (int, error) {
 	topic := s.Topic()
 
-	c := k.redisService.GetConnection()
+	c := k.Redis.GetConnection()
 	defer c.Close()
 	nums, err := c.PubSub().NumSub(topic)
 
