@@ -129,7 +129,11 @@ func (k *Server) LoadSubscription(subscription Subscription) (Subscription, bool
 
 func (k *Server) StartSubscription(subscription Subscription) error {
 	var topic = subscription.Topic()
-	logrus.Infof("Starting subscription: topic=%s", topic)
+	logrus.Infof("starting subscription: topic=%s", topic)
+
+	if k.Debug {
+		logrus.Debugf("to debug the redis events, please run:\n  redis-cli SUBSCRIBE %s", topic)
+	}
 	if err := subscription.Start(); err != nil {
 		return err
 	}
@@ -210,7 +214,7 @@ func (k *Server) Start(bind string) error {
 	// register the protobuf with the gRPC server and the server implementation
 	pb.RegisterSubscriptionServiceServer(k.grpcServer, k)
 
-	logrus.Infof("gRPC server listening on %s", bind)
+	logrus.Infof("start listening on %s", bind)
 	c, err := net.Listen("tcp", bind)
 	if err != nil {
 		return err
