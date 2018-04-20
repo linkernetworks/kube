@@ -1,6 +1,8 @@
 package outcluster
 
 import (
+	"log"
+
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
@@ -24,7 +26,8 @@ func DiscoverVisibleNodeByAddressType(clientset *kubernetes.Clientset, addressTy
 	for _, n := range nodesList.Items {
 		for _, addr := range n.Status.Addresses {
 			if string(addr.Type) == addressType && addr.Address != "" {
-				return &n, addr.Address, nil
+				log.Printf(addr.Address)
+				return &n, "localhost", nil
 			}
 		}
 	}
