@@ -19,7 +19,7 @@ func TestCleanUp(t *testing.T) {
 	}
 	cf := config.MustRead("../../../config/testing.json")
 	rds := redis.New(cf.Redis)
-	dts := deployment.LoadDeploymentTargets(cf.JobController.DeploymentTargets, rds)
+	dts := deployment.LoadDeploymentTargets(cf.JobServer.DeploymentTargets, rds)
 
 	server := NewServer(rds, dts)
 	assert.NotNil(t, server)
@@ -49,7 +49,7 @@ func TestSubscribePodLogs(t *testing.T) {
 
 	cf := config.MustRead("../../../config/testing.json")
 	rds := redis.New(cf.Redis)
-	dts := deployment.LoadDeploymentTargets(cf.JobController.DeploymentTargets, rds)
+	dts := deployment.LoadDeploymentTargets(cf.JobServer.DeploymentTargets, rds)
 
 	server := NewServer(rds, dts)
 	assert.NotNil(t, server)
@@ -77,7 +77,7 @@ func TestSubscribeJobLogs(t *testing.T) {
 
 	cf := config.MustRead("../../../config/testing.json")
 	rds := redis.New(cf.Redis)
-	dts := deployment.LoadDeploymentTargets(cf.JobController.DeploymentTargets, rds)
+	dts := deployment.LoadDeploymentTargets(cf.JobServer.DeploymentTargets, rds)
 
 	server := NewServer(rds, dts)
 	assert.NotNil(t, server)
@@ -120,7 +120,7 @@ func TestSubscribePodEvent(t *testing.T) {
 
 	cf := config.MustRead("../../../config/testing.json")
 	rds := redis.New(cf.Redis)
-	dts := deployment.LoadDeploymentTargets(cf.JobController.DeploymentTargets, rds)
+	dts := deployment.LoadDeploymentTargets(cf.JobServer.DeploymentTargets, rds)
 
 	server := NewServer(rds, dts)
 	assert.NotNil(t, server)

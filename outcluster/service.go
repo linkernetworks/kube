@@ -159,9 +159,9 @@ func Rewrite(clientset *kubernetes.Clientset, cf config.Config, settings Rewrite
 			return dst, err
 		}
 		for _, port := range jobserver.Spec.Ports {
-			dst.JobController.Host = address
-			dst.JobController.Port = port.NodePort
-			logger.Infof("Rewrited jobserver address to %s", dst.JobController.Addr())
+			dst.JobServer.Host = address
+			dst.JobServer.Port = port.NodePort
+			logger.Infof("Rewrited jobserver address to %s", dst.JobServer.Addr())
 			break
 		}
 	}
