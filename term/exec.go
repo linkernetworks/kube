@@ -22,7 +22,7 @@ func NewExecRequest(clientset *kubernetes.Clientset, p ConnectRequestPayload) *r
 		Param("stdout", "true").
 		Param("stderr", "true").
 		Param("tty", "true").
-		Param("command", "/bin/sh")
+		Param("command", p.Command)
 
 	req.VersionedParams(&corev1.PodExecOptions{
 		Container: p.ContainerName,
