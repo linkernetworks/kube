@@ -2,7 +2,7 @@ package summary
 
 import (
 	"bitbucket.org/linkernetworks/aurora/src/entity"
-	pb "bitbucket.org/linkernetworks/aurora/src/grpc/messages"
+	pb "bitbucket.org/linkernetworks/aurora/src/jobserver/pb"
 
 	"github.com/stretchr/testify/assert"
 	"testing"
