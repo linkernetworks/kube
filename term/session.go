@@ -24,6 +24,8 @@ type SocketIoTermSession struct {
 	SizeQueue *SocketIoSizeQueue
 	TTY       bool
 	Pod       *corev1.Pod
+
+	CreatedAt time.Time
 }
 
 func NewSession(socket socketio.Socket, pod *corev1.Pod) *SocketIoTermSession {
@@ -35,20 +37,22 @@ func NewSession(socket socketio.Socket, pod *corev1.Pod) *SocketIoTermSession {
 		SizeQueue: &SocketIoSizeQueue{C: make(chan *remotecommand.TerminalSize, 10)},
 		TTY:       true,
 		Pod:       pod,
+		CreatedAt: time.Now(),
 	}
 }
 
 func (s *SocketIoTermSession) NewExecutor(clientset *kubernetes.Clientset, restConfig *rest.Config, p ConnectRequestPayload) (remotecommand.Executor, error) {
 	req := NewExecRequest(clientset, p)
-
-	logger.Debugln("Created exec request:", req.URL())
-
+	// logger.Debugln("Created exec request:", req.URL())
 	return remotecommand.NewSPDYExecutor(restConfig, http.MethodPost, req.URL())
-
 }
 
 func (s *SocketIoTermSession) Attach(socket socketio.Socket) {
 	s.Socket = socket
+	s.Stdin.Socket = socket
+	s.Stdout.Socket = socket
+	s.Stderr.Socket = socket
+
 	s.Socket.On("term:stdin", func(data string) {
 		s.Stdin.Write([]byte(data))
 	})
