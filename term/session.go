@@ -66,10 +66,6 @@ func (s *SocketIoTermSession) Attach(socket socketio.Socket) {
 		}
 		s.SizeQueue.Push(p.Columns, p.Rows)
 	})
-	go func() {
-		time.Sleep(time.Second * 1)
-		s.Socket.Emit("term:connected")
-	}()
 }
 
 func (s *SocketIoTermSession) Terminate() {
