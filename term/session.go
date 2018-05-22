@@ -3,6 +3,7 @@ package term
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"bitbucket.org/linkernetworks/aurora/src/logger"
 
@@ -37,28 +38,17 @@ func NewSession(socket socketio.Socket, pod *corev1.Pod) *SocketIoTermSession {
 	}
 }
 
-func (s *SocketIoTermSession) Connect(clientset *kubernetes.Clientset, restConfig *rest.Config, p ConnectRequestPayload) error {
+func (s *SocketIoTermSession) NewExecutor(clientset *kubernetes.Clientset, restConfig *rest.Config, p ConnectRequestPayload) (remotecommand.Executor, error) {
 	req := NewExecRequest(clientset, p)
 
-	logger.Infoln("Created request:", req.URL())
+	logger.Debugln("Created exec request:", req.URL())
 
-	exec, err := remotecommand.NewSPDYExecutor(restConfig, http.MethodPost, req.URL())
-	if err != nil {
-		return err
-	}
+	return remotecommand.NewSPDYExecutor(restConfig, http.MethodPost, req.URL())
 
-	s.attach()
-	s.Socket.Emit("term:connected")
-	return exec.Stream(remotecommand.StreamOptions{
-		Stdin:             s.Stdin,
-		Stdout:            s.Stdout,
-		Stderr:            s.Stderr,
-		Tty:               s.TTY,
-		TerminalSizeQueue: s.SizeQueue,
-	})
 }
 
-func (s *SocketIoTermSession) attach() {
+func (s *SocketIoTermSession) Attach(socket socketio.Socket) {
+	s.Socket = socket
 	s.Socket.On("term:stdin", func(data string) {
 		s.Stdin.Write([]byte(data))
 	})
@@ -72,6 +62,10 @@ func (s *SocketIoTermSession) attach() {
 		}
 		s.SizeQueue.Push(p.Columns, p.Rows)
 	})
+	go func() {
+		time.Sleep(time.Second * 1)
+		s.Socket.Emit("term:connected")
+	}()
 }
 
 func (s *SocketIoTermSession) Terminate() {
