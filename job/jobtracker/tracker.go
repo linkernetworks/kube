@@ -6,7 +6,7 @@ import (
 	"bitbucket.org/linkernetworks/aurora/src/jobcontroller/types"
 	"bitbucket.org/linkernetworks/aurora/src/jobtranslator"
 	"bitbucket.org/linkernetworks/aurora/src/kubernetes/kubemon"
-	"bitbucket.org/linkernetworks/aurora/src/logger"
+	"github.com/linkernetworks/logger"
 
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/apimachinery/pkg/fields"

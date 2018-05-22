@@ -6,7 +6,7 @@ import (
 
 	"bitbucket.org/linkernetworks/aurora/src/deployment"
 	"bitbucket.org/linkernetworks/aurora/src/event"
-	"bitbucket.org/linkernetworks/aurora/src/logger"
+	"github.com/linkernetworks/logger"
 	"github.com/linkernetworks/redis"
 
 	v1 "k8s.io/api/core/v1"

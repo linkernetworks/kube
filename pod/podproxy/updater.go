@@ -11,7 +11,7 @@ import (
 	"bitbucket.org/linkernetworks/aurora/src/kubernetes/pod/podtracker"
 	"bitbucket.org/linkernetworks/aurora/src/kubernetes/pod/podutil"
 	"bitbucket.org/linkernetworks/aurora/src/kubernetes/types"
-	"bitbucket.org/linkernetworks/aurora/src/logger"
+	"github.com/linkernetworks/logger"
 
 	"k8s.io/client-go/kubernetes"
 

@@ -9,7 +9,7 @@ import (
 	dnodes "bitbucket.org/linkernetworks/aurora/src/deployment/nodes"
 	"bitbucket.org/linkernetworks/aurora/src/entity"
 	"bitbucket.org/linkernetworks/aurora/src/kubernetes/kubemon"
-	"bitbucket.org/linkernetworks/aurora/src/logger"
+	"github.com/linkernetworks/logger"
 	"bitbucket.org/linkernetworks/aurora/src/service/mongo"
 	"gopkg.in/mgo.v2/bson"
 	corev1 "k8s.io/api/core/v1"

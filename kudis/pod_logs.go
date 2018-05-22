@@ -7,7 +7,7 @@ import (
 	"bitbucket.org/linkernetworks/aurora/src/deployment"
 	dtypes "bitbucket.org/linkernetworks/aurora/src/deployment/types"
 	"bitbucket.org/linkernetworks/aurora/src/event"
-	"bitbucket.org/linkernetworks/aurora/src/logger"
+	"github.com/linkernetworks/logger"
 	"github.com/linkernetworks/redis"
 )
 

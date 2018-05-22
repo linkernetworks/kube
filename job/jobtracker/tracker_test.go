@@ -8,7 +8,7 @@ import (
 
 	"bitbucket.org/linkernetworks/aurora/src/config"
 	"bitbucket.org/linkernetworks/aurora/src/jobcontroller/types"
-	"bitbucket.org/linkernetworks/aurora/src/logger"
+	"github.com/linkernetworks/logger"
 	"bitbucket.org/linkernetworks/aurora/src/service/kubernetes"
 	"k8s.io/apimachinery/pkg/api/resource"
 

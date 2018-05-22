@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"bitbucket.org/linkernetworks/aurora/src/jobcontroller/types"
-	"bitbucket.org/linkernetworks/aurora/src/logger"
+	"github.com/linkernetworks/logger"
 
 	batch "k8s.io/api/batch/v1"
 

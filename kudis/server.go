@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"bitbucket.org/linkernetworks/aurora/src/deployment"
-	"bitbucket.org/linkernetworks/aurora/src/logger"
+	"github.com/linkernetworks/logger"
 
 	pb "bitbucket.org/linkernetworks/aurora/src/kubernetes/kudis/pb"
 	"github.com/linkernetworks/redis"
