@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	"bitbucket.org/linkernetworks/aurora/src/entity"
-	"bitbucket.org/linkernetworks/aurora/src/service/mongo"
+	"github.com/linkernetworks/mongo"
 	"gopkg.in/mgo.v2/bson"
 )
 

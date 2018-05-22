@@ -8,7 +8,7 @@ import (
 
 	"bitbucket.org/linkernetworks/aurora/src/config"
 	"bitbucket.org/linkernetworks/aurora/src/service/kubernetes"
-	"bitbucket.org/linkernetworks/aurora/src/service/mongo"
+	"github.com/linkernetworks/mongo"
 	"github.com/linkernetworks/redis"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
