@@ -24,7 +24,7 @@ type SocketIoTermSession struct {
 	SizeQueue *SocketIoSizeQueue
 	TTY       bool
 	Pod       *corev1.Pod
-
+	Detached  bool
 	CreatedAt time.Time
 }
 
@@ -47,7 +47,12 @@ func (s *SocketIoTermSession) NewExecutor(clientset *kubernetes.Clientset, restC
 	return remotecommand.NewSPDYExecutor(restConfig, http.MethodPost, req.URL())
 }
 
+func (s *SocketIoTermSession) Detach() {
+	s.Detached = true
+}
+
 func (s *SocketIoTermSession) Attach(socket socketio.Socket) {
+	s.Detached = false
 	s.Socket = socket
 	s.Stdin.Socket = socket
 	s.Stdout.Socket = socket

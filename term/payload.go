@@ -9,6 +9,7 @@ type ConnectRequestPayload struct {
 	PodName       string `json:"pod"`
 	ContainerName string `json:"container"`
 	Command       string `json:"command"`
+	SessionID     string `json:"session"`
 }
 
 type TermSizePayload struct {
