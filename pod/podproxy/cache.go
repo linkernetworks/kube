@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"bitbucket.org/linkernetworks/aurora/src/service/redis"
-	redigo "github.com/garyburd/redigo/redis"
+	redigo "github.com/gomodule/redigo/redis"
 )
 
 type ProxyCache struct {
