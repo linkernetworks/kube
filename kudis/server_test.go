@@ -7,7 +7,7 @@ import (
 	"bitbucket.org/linkernetworks/aurora/src/config"
 	"bitbucket.org/linkernetworks/aurora/src/deployment"
 	"bitbucket.org/linkernetworks/aurora/src/kubernetes/testutils"
-	redis "bitbucket.org/linkernetworks/aurora/src/service/redis"
+	redis "github.com/linkernetworks/redis"
 
 	"github.com/stretchr/testify/assert"
 )

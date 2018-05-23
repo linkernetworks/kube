@@ -7,7 +7,7 @@ import (
 	"bitbucket.org/linkernetworks/aurora/src/deployment"
 	dtypes "bitbucket.org/linkernetworks/aurora/src/deployment/types"
 	"bitbucket.org/linkernetworks/aurora/src/event"
-	"bitbucket.org/linkernetworks/aurora/src/service/redis"
+	"github.com/linkernetworks/redis"
 )
 
 var JobLogRegExp = regexp.MustCompile("target:(?P<Target>[a-z_-]+):job:(?P<Job>[a-z0-9_-]+):container:(?P<Container>[a-z0-9_-]+):logs")

@@ -9,7 +9,7 @@ import (
 	"bitbucket.org/linkernetworks/aurora/src/logger"
 
 	pb "bitbucket.org/linkernetworks/aurora/src/kubernetes/kudis/pb"
-	"bitbucket.org/linkernetworks/aurora/src/service/redis"
+	"github.com/linkernetworks/redis"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"

@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"bitbucket.org/linkernetworks/aurora/src/config"
-	"bitbucket.org/linkernetworks/aurora/src/service/redis"
+	"github.com/linkernetworks/redis"
 
 	redigo "github.com/gomodule/redigo/redis"
 

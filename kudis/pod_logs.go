@@ -8,7 +8,7 @@ import (
 	dtypes "bitbucket.org/linkernetworks/aurora/src/deployment/types"
 	"bitbucket.org/linkernetworks/aurora/src/event"
 	"bitbucket.org/linkernetworks/aurora/src/logger"
-	"bitbucket.org/linkernetworks/aurora/src/service/redis"
+	"github.com/linkernetworks/redis"
 )
 
 var PodLogRegExp = regexp.MustCompile("target:(?P<Target>[a-z_-]+):pod:(?P<Pod>[a-z0-9_-]+):container:(?P<Container>[a-z0-9_-]+):logs")
