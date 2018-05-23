@@ -8,8 +8,8 @@ type ConnectRequestPayload struct {
 	Namespace     string `json:"namespace"`
 	PodName       string `json:"pod"`
 	ContainerName string `json:"container"`
-	Command       string `json:"command"`
-	SessionID     string `json:"session"`
+	Command       string `json:"command,omitempty"`
+	SessionID     string `json:"session,omitempty"`
 }
 
 type TermSizePayload struct {
