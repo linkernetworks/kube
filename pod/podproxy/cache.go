@@ -3,7 +3,7 @@ package podproxy
 import (
 	"fmt"
 
-	redigo "github.com/garyburd/redigo/redis"
+	redigo "github.com/gomodule/redigo/redis"
 	"github.com/linkernetworks/redis"
 )
 
