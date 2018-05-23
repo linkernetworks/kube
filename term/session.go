@@ -1,6 +1,7 @@
 package term
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -32,8 +33,8 @@ func NewSession(socket socketio.Socket, pod *corev1.Pod) *SocketIoTermSession {
 	return &SocketIoTermSession{
 		Socket:    socket,
 		Stdin:     &SocketIoReader{Event: "term:stdin", Socket: socket, Buffer: make(chan []byte, 30)},
-		Stdout:    &SocketIoWriter{Event: "term:stdout", Socket: socket},
-		Stderr:    &SocketIoWriter{Event: "term:stderr", Socket: socket},
+		Stdout:    &SocketIoWriter{Event: "term:stdout", Socket: socket, Buffer: bytes.NewBuffer([]byte{})},
+		Stderr:    &SocketIoWriter{Event: "term:stderr", Socket: socket, Buffer: bytes.NewBuffer([]byte{})},
 		SizeQueue: &SocketIoSizeQueue{C: make(chan *remotecommand.TerminalSize, 10)},
 		TTY:       true,
 		Pod:       pod,
