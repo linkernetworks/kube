@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"bitbucket.org/linkernetworks/aurora/src/config"
+	"github.com/linkernetworks/config"
 	"bitbucket.org/linkernetworks/aurora/src/deployment"
 	"bitbucket.org/linkernetworks/aurora/src/kubernetes/testutils"
 	redis "github.com/linkernetworks/redis"

@@ -6,7 +6,7 @@ import (
 	"sync"
 	"testing"
 
-	"bitbucket.org/linkernetworks/aurora/src/config"
+	"github.com/linkernetworks/config"
 	"bitbucket.org/linkernetworks/aurora/src/jobcontroller/types"
 	"github.com/linkernetworks/logger"
 	"bitbucket.org/linkernetworks/aurora/src/service/kubernetes"

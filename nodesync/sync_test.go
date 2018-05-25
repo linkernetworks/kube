@@ -1,7 +1,7 @@
 package nodesync
 
 import (
-	"bitbucket.org/linkernetworks/aurora/src/config"
+	"github.com/linkernetworks/config"
 	"bitbucket.org/linkernetworks/aurora/src/deployment"
 	"bitbucket.org/linkernetworks/aurora/src/service/kubernetes"
 	"github.com/linkernetworks/mongo"

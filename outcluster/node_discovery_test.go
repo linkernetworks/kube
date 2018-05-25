@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"bitbucket.org/linkernetworks/aurora/src/config"
+	"github.com/linkernetworks/config"
 	"bitbucket.org/linkernetworks/aurora/src/service/kubernetes"
 )
 

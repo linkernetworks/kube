@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"bitbucket.org/linkernetworks/aurora/src/config"
+	"github.com/linkernetworks/config"
 	"bitbucket.org/linkernetworks/aurora/src/kubernetes/kubemon"
 	kvolume "bitbucket.org/linkernetworks/aurora/src/kubernetes/volume"
 	"bitbucket.org/linkernetworks/aurora/src/service/kubernetes"

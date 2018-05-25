@@ -3,7 +3,7 @@ package podproxy
 import (
 	"testing"
 
-	"bitbucket.org/linkernetworks/aurora/src/config"
+	"github.com/linkernetworks/config"
 	"github.com/linkernetworks/redis"
 
 	redigo "github.com/gomodule/redigo/redis"

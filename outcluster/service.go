@@ -12,7 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	"bitbucket.org/linkernetworks/aurora/src/config"
+	"github.com/linkernetworks/config"
 	"github.com/linkernetworks/logger"
 	k8ssvc "bitbucket.org/linkernetworks/aurora/src/service/kubernetes"
 )
