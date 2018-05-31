@@ -4,9 +4,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/linkernetworks/config"
 	"bitbucket.org/linkernetworks/aurora/src/deployment"
 	"bitbucket.org/linkernetworks/aurora/src/kubernetes/testutils"
+	"github.com/linkernetworks/config"
 	redis "github.com/linkernetworks/redis"
 
 	"github.com/stretchr/testify/assert"
@@ -88,16 +88,18 @@ func TestSubscribeJobLogs(t *testing.T) {
 	kdt := dt.(*deployment.KubeDeploymentTarget)
 	clientset := kdt.GetClientset()
 
+	ns := "default"
+
 	// testing purpose for creating a dummy job
-	job := testutils.CreateKubernetesDummyJob("hello")
-	_, err = testutils.DeployKubenetesJob(clientset, "default", job)
+	job := testutils.CreateKubernetesDummyJob(ns, "hello")
+	job, err = testutils.DeployKubenetesJob(clientset, ns, job)
 	assert.NoError(t, err)
 
 	// should waiting the job state to succeed
-	err = testutils.WaitUntilJobComplete(clientset, "default", job)
+	err = testutils.WaitUntilJobComplete(clientset, ns, job)
 	assert.NoError(t, err)
 
-	var subscription Subscription = NewJobLogSubscription(rds, "default", dt, "hello", "hello", 10)
+	var subscription Subscription = NewJobLogSubscription(rds, ns, dt, job.GetName(), "hello", 10)
 	assert.NotNil(t, subscription)
 
 	success, reason, err := server.Subscribe(subscription)
@@ -108,8 +110,7 @@ func TestSubscribeJobLogs(t *testing.T) {
 	err = subscription.Stop()
 	assert.NoError(t, err)
 
-	// cleanup
-	defer testutils.DeleteKubenetesJob(clientset, "default", job)
+	defer testutils.DeleteKubenetesJob(clientset, ns, job)
 }
 
 func TestSubscribePodEvent(t *testing.T) {
@@ -128,7 +129,9 @@ func TestSubscribePodEvent(t *testing.T) {
 	dt, err := server.GetDeploymentTarget("default")
 	assert.NoError(t, err)
 
-	var subscription Subscription = NewPodEventSubscription(rds, "default", dt, "mongo-0")
+	ns := "default"
+
+	var subscription Subscription = NewPodEventSubscription(rds, ns, dt, "mongo-0")
 	assert.NotNil(t, subscription)
 
 	success, reason, err := server.Subscribe(subscription)

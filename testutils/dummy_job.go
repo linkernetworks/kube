@@ -9,14 +9,15 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func CreateKubernetesDummyJob(name string) *batchv1.Job {
+func CreateKubernetesDummyJob(ns string, name string) *batchv1.Job {
 	return &batchv1.Job{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Job",
 			APIVersion: "batch/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
+			GenerateName: name,
+			Namespace:    ns,
 		},
 		Spec: batchv1.JobSpec{
 			Template: corev1.PodTemplateSpec{
