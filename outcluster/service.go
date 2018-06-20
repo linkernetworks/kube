@@ -14,7 +14,7 @@ import (
 
 	"github.com/linkernetworks/config"
 	"github.com/linkernetworks/logger"
-	k8ssvc "bitbucket.org/linkernetworks/aurora/src/service/kubernetes"
+	k8ssvc "github.com/linkernetworks/service/kubernetes"
 )
 
 type RewriteSettings struct {

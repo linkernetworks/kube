@@ -3,7 +3,6 @@ package jobtracker
 import (
 	"time"
 
-	"bitbucket.org/linkernetworks/aurora/src/jobcontroller/types"
 	"github.com/linkernetworks/logger"
 
 	batch "k8s.io/api/batch/v1"
@@ -19,7 +18,7 @@ type JobStatusTracker struct {
 }
 
 type JobStatusMessage struct {
-	Phase types.Phase
+	Phase Phase
 	Job   *batch.Job
 }
 
@@ -46,30 +45,30 @@ func (t *JobStatusTracker) TrackUntilCompletion(namespace string, selector field
 		completions := *job.Spec.Completions
 
 		if job.Status.Succeeded == 0 && job.Status.Active == 0 && job.Status.Failed == 0 {
-			o <- JobStatusMessage{Phase: types.PhasePending, Job: job}
+			o <- JobStatusMessage{Phase: PhasePending, Job: job}
 			return false
 		} else if job.Status.Succeeded == completions {
-			o <- JobStatusMessage{Phase: types.PhaseSucceeded, Job: job}
+			o <- JobStatusMessage{Phase: PhaseSucceeded, Job: job}
 			return true
 		} else if job.Status.Failed > 0 {
-			o <- JobStatusMessage{Phase: types.PhaseFailed, Job: job}
+			o <- JobStatusMessage{Phase: PhaseFailed, Job: job}
 			return true
 		} else if job.Status.Active > 0 {
-			o <- JobStatusMessage{Phase: types.PhaseRunning, Job: job}
+			o <- JobStatusMessage{Phase: PhaseRunning, Job: job}
 			return false
 		} else {
 			for _, condition := range job.Status.Conditions {
 				if condition.Type == "Complete" {
-					o <- JobStatusMessage{Phase: types.PhaseSucceeded, Job: job}
+					o <- JobStatusMessage{Phase: PhaseSucceeded, Job: job}
 					return true
 				} else if condition.Type == "Failed" {
-					o <- JobStatusMessage{Phase: types.PhaseFailed, Job: job}
+					o <- JobStatusMessage{Phase: PhaseFailed, Job: job}
 					return true
 				}
 			}
 
 			logger.Errorf("unexpected job status: job: %+v", job)
-			o <- JobStatusMessage{Phase: types.PhasePending, Job: job}
+			o <- JobStatusMessage{Phase: PhasePending, Job: job}
 			return true
 		}
 

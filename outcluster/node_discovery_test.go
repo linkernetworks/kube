@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/linkernetworks/config"
-	"bitbucket.org/linkernetworks/aurora/src/service/kubernetes"
+	"github.com/linkernetworks/service/kubernetes"
 )
 
 func TestDiscoverVisibleNodes(t *testing.T) {

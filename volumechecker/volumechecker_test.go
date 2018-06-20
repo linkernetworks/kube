@@ -7,7 +7,7 @@ import (
 	"github.com/linkernetworks/config"
 	"bitbucket.org/linkernetworks/aurora/src/kubernetes/kubemon"
 	kvolume "bitbucket.org/linkernetworks/aurora/src/kubernetes/volume"
-	"bitbucket.org/linkernetworks/aurora/src/service/kubernetes"
+	"github.com/linkernetworks/service/kubernetes"
 	"bitbucket.org/linkernetworks/aurora/src/types/container"
 
 	"github.com/stretchr/testify/assert"

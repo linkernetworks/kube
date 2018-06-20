@@ -3,7 +3,6 @@ package jobtracker
 import (
 	"sync"
 
-	"bitbucket.org/linkernetworks/aurora/src/jobcontroller/types"
 	"bitbucket.org/linkernetworks/aurora/src/jobtranslator"
 	"bitbucket.org/linkernetworks/aurora/src/kubernetes/kubemon"
 	"github.com/linkernetworks/logger"
@@ -36,7 +35,7 @@ func matchJobName(obj interface{}, podName string) (*batchv1.Job, bool) {
 }
 
 // WaitForPhase wait for a pod to the specific phase
-func (t *JobTracker) WaitForPhase(waitPhase types.Phase) {
+func (t *JobTracker) WaitForPhase(waitPhase Phase) {
 	var m sync.Mutex
 	var cv = sync.NewCond(&m)
 	m.Lock()

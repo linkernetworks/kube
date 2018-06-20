@@ -3,7 +3,7 @@ package nodesync
 import (
 	"github.com/linkernetworks/config"
 	"bitbucket.org/linkernetworks/aurora/src/deployment"
-	"bitbucket.org/linkernetworks/aurora/src/service/kubernetes"
+	"github.com/linkernetworks/service/kubernetes"
 	"github.com/linkernetworks/mongo"
 	"github.com/stretchr/testify/assert"
 	"os"

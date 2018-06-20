@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/linkernetworks/config"
-	"bitbucket.org/linkernetworks/aurora/src/service/kubernetes"
+	"github.com/linkernetworks/service/kubernetes"
 
 	"github.com/stretchr/testify/assert"
 

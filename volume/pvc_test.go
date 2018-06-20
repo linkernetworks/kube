@@ -3,7 +3,7 @@ package volume
 import (
 	"github.com/linkernetworks/config"
 	"bitbucket.org/linkernetworks/aurora/src/entity"
-	k8ssvc "bitbucket.org/linkernetworks/aurora/src/service/kubernetes"
+	k8ssvc "github.com/linkernetworks/service/kubernetes"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"

@@ -9,7 +9,7 @@ import (
 	"github.com/linkernetworks/config"
 	"bitbucket.org/linkernetworks/aurora/src/jobcontroller/types"
 	"github.com/linkernetworks/logger"
-	"bitbucket.org/linkernetworks/aurora/src/service/kubernetes"
+	"github.com/linkernetworks/service/kubernetes"
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/stretchr/testify/assert"
