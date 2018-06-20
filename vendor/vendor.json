@@ -1518,12 +1518,6 @@
 			"revisionTime": "2017-11-01T19:11:50Z"
 		},
 		{
-			"checksumSHA1": "dWQw/9I4XO+XDMeRfNDUfZQWqB8=",
-			"path": "k8s.io/client-go/kubernetes",
-			"revision": "72e1c2a1ef30b3f8da039e92d4a6a1f079f374e8",
-			"revisionTime": "2017-11-01T19:11:50Z"
-		},
-		{
 			"checksumSHA1": "KEcOHsXSeI62b8o3lr9aqlNIwBs=",
 			"path": "k8s.io/client-go/kubernetes/scheme",
 			"revision": "72e1c2a1ef30b3f8da039e92d4a6a1f079f374e8",
