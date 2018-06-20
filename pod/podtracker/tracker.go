@@ -3,7 +3,7 @@ package podtracker
 import (
 	"sync"
 
-	"bitbucket.org/linkernetworks/aurora/src/kubernetes/kubemon"
+	"github.com/linkernetworks/kube/kubemon"
 	"github.com/linkernetworks/logger"
 
 	v1 "k8s.io/api/core/v1"

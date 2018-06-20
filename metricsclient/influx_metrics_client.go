@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"bitbucket.org/linkernetworks/aurora/src/kubernetes/types"
+	"github.com/linkernetworks/kube/types"
 
 	client "github.com/influxdata/influxdb/client/v2"
 )

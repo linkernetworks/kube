@@ -3,7 +3,7 @@ package metricsclient
 import (
 	"time"
 
-	"bitbucket.org/linkernetworks/aurora/src/kubernetes/types"
+	"github.com/linkernetworks/kube/types"
 )
 
 // MetricsClient is an abstract of client which can retrieve Node/Pod/Container metrics

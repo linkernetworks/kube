@@ -4,11 +4,11 @@ import (
 	"os"
 	"testing"
 
+	"github.com/linkernetworks/kube/kubemon"
+	kvolume "github.com/linkernetworks/kube/volume"
 	"github.com/linkernetworks/config"
-	"bitbucket.org/linkernetworks/aurora/src/kubernetes/kubemon"
-	kvolume "bitbucket.org/linkernetworks/aurora/src/kubernetes/volume"
 	"github.com/linkernetworks/service/kubernetes"
-	"bitbucket.org/linkernetworks/aurora/src/types/container"
+	"github.com/linkernetworks/types/container"
 
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/mgo.v2/bson"

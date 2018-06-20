@@ -3,7 +3,7 @@ package metricsclient
 import (
 	"testing"
 
-	"bitbucket.org/linkernetworks/aurora/src/kubernetes/metricsclient/testutils"
+	"github.com/linkernetworks/kube/metricsclient/testutils"
 
 	client "github.com/influxdata/influxdb/client/v2"
 	"github.com/stretchr/testify/assert"

@@ -3,8 +3,8 @@ package podtracker
 import (
 	"errors"
 
-	"bitbucket.org/linkernetworks/aurora/src/kubernetes/kubemon"
-	"bitbucket.org/linkernetworks/aurora/src/kubernetes/pod/podutil"
+	"github.com/linkernetworks/kube/kubemon"
+	"github.com/linkernetworks/kube/pod/podutil"
 	"github.com/linkernetworks/logger"
 
 	v1 "k8s.io/api/core/v1"
